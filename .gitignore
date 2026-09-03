@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.env
+
+# Corpus and generated data stay out of the repo. Re-create with:
+#   as-endorsed corpus download
+#   as-endorsed parse --all
+#   as-endorsed synth accounts
+data/raw/*
+data/parsed/*
+data/synthetic/*
+!data/raw/.gitkeep
+!data/parsed/.gitkeep
+!data/synthetic/.gitkeep
