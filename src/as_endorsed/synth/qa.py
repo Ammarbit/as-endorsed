@@ -89,9 +89,22 @@ def endorsement_questions(acct: Account) -> list[dict]:
                              "expected_endorsements": [e.key], "as_of": None})
                 if e.effective_date > p.term_start:
                     before = e.effective_date - timedelta(days=1)
+                    # Another attached endorsement on the same clause, in force on that date, supplies the answer.
+                    in_force = [
+                        (o, attached[o.form_id]) for o in LIBRARY
+                        if o.form_id != spec.form_id and o.form_id in attached
+                        and attached[o.form_id].effective_date <= before
+                        and any(set(ot.paths) & set(t.paths) for ot in o.qa)
+                    ]
+                    if in_force:
+                        o, oe = max(in_force, key=lambda x: x[1].effective_date)
+                        ot = next((x for x in o.qa if set(x.paths) & set(t.paths) and x.question == t.question), None) or o.qa[0]
+                        answer, ends = ot.attached.format(schedule=next(iter(oe.schedule_values.values()), "")), [oe.key]
+                    else:
+                        answer, ends = t.not_attached, []
                     rows.append({**base_row, "difficulty": "as-of", "as_of": before,
                                  "question": q[:-1] + f" as of {before.isoformat()}?",
-                                 "answer": t.not_attached, "expected_endorsements": []})
+                                 "answer": answer, "expected_endorsements": ends})
             elif negatives_budget > 0 and (i + acct.seed) % 3 == 0:
                 negatives_budget -= 1
                 rows.append({**base_row, "difficulty": "negative", "question": q, "answer": t.not_attached,

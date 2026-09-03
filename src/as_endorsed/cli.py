@@ -9,6 +9,8 @@ from rich import print as rprint
 from rich.table import Table
 
 from as_endorsed.cli_endorse import endorse_app, resolve_cmd, review_cmd
+from as_endorsed.cli_generate import ask_cmd, eval_generate_cmd
+from as_endorsed.cli_retrieval import eval_app, search_cmd
 from as_endorsed.config import settings
 from as_endorsed.corpus import registry
 
@@ -20,6 +22,10 @@ app.add_typer(synth_app, name="synth")
 app.add_typer(endorse_app, name="endorse")
 app.command("resolve")(resolve_cmd)
 app.command("review")(review_cmd)
+app.command("search")(search_cmd)
+app.command("ask")(ask_cmd)
+eval_app.command("generate")(eval_generate_cmd)
+app.add_typer(eval_app, name="eval")
 
 
 @corpus_app.command("list")
