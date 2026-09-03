@@ -17,3 +17,7 @@ data/synthetic/*
 !data/raw/.gitkeep
 !data/parsed/.gitkeep
 !data/synthetic/.gitkeep
+data/endorse/*
+data/resolved/*
+!data/endorse/.gitkeep
+!data/resolved/.gitkeep
