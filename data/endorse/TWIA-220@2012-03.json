@@ -1,0 +1,55 @@
+{
+  "endorsement_form_id": "TWIA-220",
+  "endorsement_edition": "2012-03",
+  "ops": [
+    {
+      "op_id": "TWIA-220@2012-03#1",
+      "endorsement_form_id": "TWIA-220",
+      "endorsement_edition": "2012-03",
+      "op": "ADD",
+      "target_ref": null,
+      "target_path": null,
+      "target_term": null,
+      "new_label": null,
+      "new_text": "the limit of liability on the attached policy for: Coverage A, Dwelling shall be revised annually by a percentage established by a building cost index, applied to your policy at renewal. The revised limit of liability will be rounded up to the next $1000, subject to the maximum limit of liability permitted by law. You have the right to request modification of this change in the limit of liability. If your limit of liability change at renewal differs from the revised limit resulting from application of this endorsement, your request will take effect at the inception of the renewal, provided that it is received prior to the beginning of the policy renewal date. Requests for a limit of liability change received after inception of the policy will be processed as an endorsement to the policy, and will not become effective prior to the date received by TWIA. The limits of liability for Additional Living Expense and other, optional extensions of coverage that are based on the limit of liability for the Dwelling, if applicable, will also be adjusted subject to the maximum limit of liability permitted by law. It is your responsibility to review your coverage regularly and make sure your dwelling limit of liability is adequate to repair or replace your insured property. This endorsement and any changes that result from it do not guarantee that you will have adequate coverage. Only you can determine the appropriate amount of coverage.",
+      "new_clauses": [
+        {
+          "labels": [],
+          "text": "the limit of liability on the attached policy for:"
+        },
+        {
+          "labels": [],
+          "text": "Coverage A, Dwelling"
+        },
+        {
+          "labels": [],
+          "text": "shall be revised annually by a percentage established by a building cost index, applied to your policy at renewal. The revised limit of liability will be rounded up to the next $1000, subject to the maximum limit of liability permitted by law. You have the right to request modification of this change in the limit of liability."
+        },
+        {
+          "labels": [],
+          "text": "If your limit of liability change at renewal differs from the revised limit resulting from application of this endorsement, your request will take effect at the inception of the renewal, provided that it is received prior to the beginning of the policy renewal date. Requests for a limit of liability change received after inception of the policy will be processed as an endorsement to the policy, and will not become effective prior to the date received by TWIA."
+        },
+        {
+          "labels": [],
+          "text": "The limits of liability for Additional Living Expense and other, optional extensions of coverage that are based on the limit of liability for the Dwelling, if applicable, will also be adjusted subject to the maximum limit of liability permitted by law."
+        },
+        {
+          "labels": [],
+          "text": "It is your responsibility to review your coverage regularly and make sure your dwelling limit of liability is adequate to repair or replace your insured property. This endorsement and any changes that result from it do not guarantee that you will have adequate coverage. Only you can determine the appropriate amount of coverage."
+        }
+      ],
+      "schedule_key": null,
+      "method": "rule",
+      "confidence": 0.4,
+      "status": "held",
+      "notes": [
+        "directive names no target clause",
+        "low-confidence idiom; review before applying"
+      ],
+      "source_page": 1,
+      "directive": "It is agreed that the limit of liability on the attached policy for:"
+    }
+  ],
+  "scanned": false,
+  "notes": []
+}

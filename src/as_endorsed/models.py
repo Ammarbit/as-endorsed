@@ -31,6 +31,7 @@ class FormSpec(BaseModel):
     filename: str
     license: str
     parse_supported: bool = True
+    base_form_id: str | None = Field(default=None, description="For endorsements: the form they amend")
     note: str | None = None
 
     @property

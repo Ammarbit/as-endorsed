@@ -1,0 +1,69 @@
+{
+  "account_id": "SYN-00036",
+  "base_form_key": "NFIP-DWELLING@2021-10",
+  "as_of": "2027-04-23",
+  "changed": [
+    {
+      "path": "IV.14",
+      "parent_path": "IV",
+      "base_clause_id": "NFIP-DWELLING@2021-10:IV.14",
+      "text_as_endorsed": "Hot tubs and spas that are not bathroom fixtures, and swimming pools, and their equipment, such as, but not limited to, heaters, filters, pumps, and pipes, wherever located.",
+      "original_text": "Hot tubs and spas that are not bathroom fixtures, and swimming pools, and their equipment, such as, but not limited to, heaters, filters, pumps, and pipes, wherever located.",
+      "active": false,
+      "added_by": null,
+      "lineage": [
+        {
+          "op_id": "SYN-END-02@2026-01#1",
+          "endorsement_key": "SYN-END-02@2026-01",
+          "op": "DELETE",
+          "effective_date": "2026-04-24"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "path": "III.C.2.a.(1)",
+      "parent_path": "III.C.2.a",
+      "base_clause_id": "NFIP-DWELLING@2021-10:III.C.2.a.(1)",
+      "text_as_endorsed": "We will pay up to $2,500 for costs you incur to protect the insured building from a flood or imminent danger of flood, for the following:",
+      "original_text": "We will pay up to $1,000 for costs you incur to protect the insured building from a flood or imminent danger of flood, for the following:",
+      "active": true,
+      "added_by": null,
+      "lineage": [
+        {
+          "op_id": "SYN-END-05@2026-01#1",
+          "endorsement_key": "SYN-END-05@2026-01",
+          "op": "REPLACE",
+          "effective_date": "2026-04-24"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "path": "II.C.5",
+      "parent_path": "II.C",
+      "base_clause_id": "NFIP-DWELLING@2021-10:II.C.5",
+      "text_as_endorsed": "Basement. Any area of a building having its floor below ground level on all sides. A crawlspace, or an area with its floor at or above the lowest adjacent grade on any side, is not a basement.",
+      "original_text": "Basement. Any area of a building, including any sunken room or sunken portion of a room, having its floor below ground level on all sides.",
+      "active": true,
+      "added_by": null,
+      "lineage": [
+        {
+          "op_id": "SYN-END-06@2026-01#1",
+          "endorsement_key": "SYN-END-06@2026-01",
+          "op": "REPLACE",
+          "effective_date": "2026-04-24"
+        }
+      ],
+      "flags": []
+    }
+  ],
+  "conflicts": [],
+  "unresolved": [],
+  "held": [],
+  "applied_op_ids": [
+    "SYN-END-02@2026-01#1",
+    "SYN-END-05@2026-01#1",
+    "SYN-END-06@2026-01#1"
+  ]
+}

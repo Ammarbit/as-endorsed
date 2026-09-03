@@ -1,0 +1,50 @@
+{
+  "account_id": "SYN-00010",
+  "base_form_key": "NFIP-DWELLING@2021-10",
+  "as_of": "2026-10-29",
+  "changed": [
+    {
+      "path": "IV.18",
+      "parent_path": "IV",
+      "base_clause_id": null,
+      "text_as_endorsed": "The following detached structure(s) at the described location, as shown in the Schedule: Guest cottage All other terms and conditions of this policy remain unchanged.",
+      "original_text": null,
+      "active": true,
+      "added_by": "SYN-END-07@2026-01",
+      "lineage": [
+        {
+          "op_id": "SYN-END-07@2026-01#1",
+          "endorsement_key": "SYN-END-07@2026-01",
+          "op": "ADD",
+          "effective_date": "2025-10-30"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "path": "IV.17",
+      "parent_path": "IV",
+      "base_clause_id": null,
+      "text_as_endorsed": "Solar panels, solar water heaters, and related mounting hardware that are not permanently affixed to the building, and any batteries or inverters located outside the building.",
+      "original_text": null,
+      "active": true,
+      "added_by": "SYN-END-03@2026-01",
+      "lineage": [
+        {
+          "op_id": "SYN-END-03@2026-01#1",
+          "endorsement_key": "SYN-END-03@2026-01",
+          "op": "ADD",
+          "effective_date": "2026-01-05"
+        }
+      ],
+      "flags": []
+    }
+  ],
+  "conflicts": [],
+  "unresolved": [],
+  "held": [],
+  "applied_op_ids": [
+    "SYN-END-07@2026-01#1",
+    "SYN-END-03@2026-01#1"
+  ]
+}

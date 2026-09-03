@@ -1,0 +1,299 @@
+{
+  "endorsement_form_id": "TWIA-802",
+  "endorsement_edition": "2019-11",
+  "ops": [
+    {
+      "op_id": "TWIA-802@2019-11#1",
+      "endorsement_form_id": "TWIA-802",
+      "endorsement_edition": "2019-11",
+      "op": "REPLACE",
+      "target_ref": "Your Duties After Loss Condition 4.a.(5)",
+      "target_path": "CONDITIONS.4.a.(5)",
+      "target_term": null,
+      "new_label": null,
+      "new_text": "4. Duties After Loss. a. Your Duties After Loss. (5) You must keep an accurate record of repair expenses and proof of payment of any applicable Deductible. Upon Completion of repairs or replacement, you may submit reasonable proof of repair expenses and payment of any applicable Deductible, including invoices, bills, statements, receipts, canceled checks, money order receipts, credit card statements, and a copy of an executed installment plan contract or other financing arrangement that requires full payment of the Deductible over time.",
+      "new_clauses": [
+        {
+          "labels": [
+            "4"
+          ],
+          "text": "Duties After Loss."
+        },
+        {
+          "labels": [
+            "4",
+            "a"
+          ],
+          "text": "Your Duties After Loss."
+        },
+        {
+          "labels": [
+            "4",
+            "a",
+            "(5)"
+          ],
+          "text": "You must keep an accurate record of repair expenses and proof of payment of any applicable Deductible. Upon Completion of repairs or replacement, you may submit reasonable proof of repair expenses and payment of any applicable Deductible, including invoices, bills, statements, receipts, canceled checks, money order receipts, credit card statements, and a copy of an executed installment plan contract or other financing arrangement that requires full payment of the Deductible over time."
+        }
+      ],
+      "schedule_key": null,
+      "method": "rule",
+      "confidence": 0.9,
+      "status": "resolved",
+      "notes": [
+        "section CONDITIONS + path 4.a.(5)"
+      ],
+      "source_page": 1,
+      "directive": "Your Duties After Loss Condition 4.a.(5) is replaced by the following:"
+    },
+    {
+      "op_id": "TWIA-802@2019-11#2",
+      "endorsement_form_id": "TWIA-802",
+      "endorsement_edition": "2019-11",
+      "op": "REPLACE",
+      "target_ref": "Our Duties After Loss Settlement Condition 4.b.(2)",
+      "target_path": "CONDITIONS.4.b.(2)",
+      "target_term": null,
+      "new_label": null,
+      "new_text": "4. Duties After Loss. b. Our Duties After Loss. information requested under Condition 4.b.(1), whichever is later, we shall provide you, in writing, notice of the amount of the loss we will pay, if any, and notice that: If we accept coverage for your claim under Coverage A (Dwelling) in full or part, our notification under this subsection will notify you of the deadlines for completion and documentation of repairs and for demanding appraisal of the “replacement cost” under Condition 6.c.",
+      "new_clauses": [
+        {
+          "labels": [
+            "4"
+          ],
+          "text": "Duties After Loss."
+        },
+        {
+          "labels": [
+            "4",
+            "b"
+          ],
+          "text": "Our Duties After Loss. information requested under Condition 4.b.(1), whichever is later, we shall provide you, in writing, notice of the amount of the loss we will pay, if any, and notice that: If we accept coverage for your claim under Coverage A (Dwelling) in full or part, our notification under this subsection will notify you of the deadlines for completion and documentation of repairs and for demanding appraisal of the “replacement cost” under Condition 6.c."
+        }
+      ],
+      "schedule_key": null,
+      "method": "rule",
+      "confidence": 0.9,
+      "status": "resolved",
+      "notes": [
+        "section CONDITIONS + path 4.b.(2)"
+      ],
+      "source_page": 1,
+      "directive": "Our Duties After Loss Settlement Condition 4.b.(2). is replaced by the following:"
+    },
+    {
+      "op_id": "TWIA-802@2019-11#3",
+      "endorsement_form_id": "TWIA-802",
+      "endorsement_edition": "2019-11",
+      "op": "ADD",
+      "target_ref": "Loss Settlement Condition 6",
+      "target_path": "CONDITIONS.6",
+      "target_term": null,
+      "new_label": "c",
+      "new_text": "(2) Not later than the 60th day after the date we receive a claim or the 60th day after the date we receive (i) we have accepted coverage for the claim in full; (ii) we have accepted coverage for the claim in part and have denied coverage for the claim in part; or (iii) we have denied coverage for the claim in full. 6. Loss Settlement. c. Our liability and payment for covered losses to dwelling and other building(s) under Coverage A (Dwelling), excluding outdoor antennas, fences, and structures other than buildings, is modified as follows: completion of repairs or replacement, the “replacement cost”, and payment of the Deductible not later than the 545th day after the date we notify you of the amount we will pay under Condition 4.b.(2). 6.c.(3), we will provide you, in writing, notice of: make payment not later than the 10th day after we notify you. (1) We will pay the smallest of the following: replace the damaged dwelling and other building(s); or (a) The “replacement cost”, meaning the amount actually and necessarily spent to repair or (b) The specified limit of liability of the policy. (2) We will pay no more than the “actual cash value” until repair or replacement is completed and documentation of “replacement cost” and payment of any applicable Deductible is submitted to us under Condition 4.a.(5). (3) You may request payment of “replacement cost” by submitting documentation to us of the (4) Not later than the 30th day after the date that we receive documentation from you under Condition (a) the amount we will pay under Condition 6.c.(1); and (b) the deadline to request appraisal of the “replacement cost” under Condition 6.c.(6). (5) If we notify you under Condition 6.c.(4) that we will pay your claim, or part of your claim, we must (6) If you have not completed appraisal under Condition 11. of the amount we will pay under Condition 4.b.(2) and you dispute the amount we will pay for “replacement cost”, you may demand appraisal of the “replacement cost” not later than the 30th day after the date you receive notice from us under Condition 6.c.(4). You may demand appraisal of “replacement cost” under this subsection without regard to whether all repairs related to the claim are complete. If you demand appraisal of “replacement cost” under this subsection, the appraisal will be conducted as follows: (a) You and we will each select a competent and independent appraiser. You shall notify us of your appraiser’s identity. We shall notify you of our appraiser's identity within 10 days after we receive notice of your appraiser’s identity. The two appraisers will choose a competent and independent umpire. If they cannot agree upon an umpire within 15 days, the commissioner of insurance shall select an umpire from a roster of qualified umpires maintained by the Texas Department of Insurance. (b) The two appraisers will then determine the “replacement cost.” If the appraisers fail to agree, they will submit their differences to the umpire. An itemized decision agreed to by any two of these three and filed with us will determine the “replacement cost”. (c) You and we are responsible in equal shares for paying the costs incurred or charged in connection with the appraisal, including expenses of the appraisers and umpire. If we pay more than our share of the costs of appraisal, our liability and payment for covered losses shall be reduced by the amount we pay in excess of our share. (d) The appraisal decision is binding upon you and us and is not otherwise reviewable or appealable except as provided by Condition 11.g. and 11.h.",
+      "new_clauses": [
+        {
+          "labels": [
+            "4",
+            "b",
+            "(2)"
+          ],
+          "text": "Not later than the 60th day after the date we receive a claim or the 60th day after the date we receive"
+        },
+        {
+          "labels": [
+            "4",
+            "b",
+            "(i)"
+          ],
+          "text": "we have accepted coverage for the claim in full;"
+        },
+        {
+          "labels": [
+            "4",
+            "b",
+            "(i)",
+            "(ii)"
+          ],
+          "text": "we have accepted coverage for the claim in part and have denied coverage for the claim in part; or"
+        },
+        {
+          "labels": [
+            "4",
+            "b",
+            "(i)",
+            "(iii)"
+          ],
+          "text": "we have denied coverage for the claim in full."
+        },
+        {
+          "labels": [
+            "6"
+          ],
+          "text": "Loss Settlement."
+        },
+        {
+          "labels": [
+            "6",
+            "c"
+          ],
+          "text": "Our liability and payment for covered losses to dwelling and other building(s) under Coverage A (Dwelling), excluding outdoor antennas, fences, and structures other than buildings, is modified as follows: completion of repairs or replacement, the “replacement cost”, and payment of the Deductible not later than the 545th day after the date we notify you of the amount we will pay under Condition 4.b.(2). 6.c.(3), we will provide you, in writing, notice of: make payment not later than the 10th day after we notify you."
+        },
+        {
+          "labels": [
+            "6",
+            "c",
+            "(1)"
+          ],
+          "text": "We will pay the smallest of the following: replace the damaged dwelling and other building(s); or"
+        },
+        {
+          "labels": [
+            "6",
+            "c",
+            "(1)",
+            "(a)"
+          ],
+          "text": "The “replacement cost”, meaning the amount actually and necessarily spent to repair or"
+        },
+        {
+          "labels": [
+            "6",
+            "c",
+            "(1)",
+            "(b)"
+          ],
+          "text": "The specified limit of liability of the policy."
+        },
+        {
+          "labels": [
+            "6",
+            "c",
+            "(2)"
+          ],
+          "text": "We will pay no more than the “actual cash value” until repair or replacement is completed and documentation of “replacement cost” and payment of any applicable Deductible is submitted to us under Condition 4.a.(5)."
+        },
+        {
+          "labels": [
+            "6",
+            "c",
+            "(3)"
+          ],
+          "text": "You may request payment of “replacement cost” by submitting documentation to us of the"
+        },
+        {
+          "labels": [
+            "6",
+            "c",
+            "(4)"
+          ],
+          "text": "Not later than the 30th day after the date that we receive documentation from you under Condition"
+        },
+        {
+          "labels": [
+            "6",
+            "c",
+            "(a)"
+          ],
+          "text": "the amount we will pay under Condition 6.c.(1); and"
+        },
+        {
+          "labels": [
+            "6",
+            "c",
+            "(b)"
+          ],
+          "text": "the deadline to request appraisal of the “replacement cost” under Condition 6.c.(6)."
+        },
+        {
+          "labels": [
+            "6",
+            "c",
+            "(5)"
+          ],
+          "text": "If we notify you under Condition 6.c.(4) that we will pay your claim, or part of your claim, we must"
+        },
+        {
+          "labels": [
+            "6",
+            "c",
+            "(6)"
+          ],
+          "text": "If you have not completed appraisal under Condition 11. of the amount we will pay under Condition 4.b.(2) and you dispute the amount we will pay for “replacement cost”, you may demand appraisal of the “replacement cost” not later than the 30th day after the date you receive notice from us under Condition 6.c.(4). You may demand appraisal of “replacement cost” under this subsection without regard to whether all repairs related to the claim are complete. If you demand appraisal of “replacement cost” under this subsection, the appraisal will be conducted as follows:"
+        },
+        {
+          "labels": [
+            "6",
+            "c",
+            "(6)",
+            "(a)"
+          ],
+          "text": "You and we will each select a competent and independent appraiser. You shall notify us of your appraiser’s identity. We shall notify you of our appraiser's identity within 10 days after we receive notice of your appraiser’s identity. The two appraisers will choose a competent and independent umpire. If they cannot agree upon an umpire within 15 days, the commissioner of insurance shall select an umpire from a roster of qualified umpires maintained by the Texas Department of Insurance."
+        },
+        {
+          "labels": [
+            "6",
+            "c",
+            "(6)",
+            "(b)"
+          ],
+          "text": "The two appraisers will then determine the “replacement cost.” If the appraisers fail to agree, they will submit their differences to the umpire. An itemized decision agreed to by any two of these three and filed with us will determine the “replacement cost”."
+        },
+        {
+          "labels": [
+            "6",
+            "c",
+            "(6)",
+            "(c)"
+          ],
+          "text": "You and we are responsible in equal shares for paying the costs incurred or charged in connection with the appraisal, including expenses of the appraisers and umpire. If we pay more than our share of the costs of appraisal, our liability and payment for covered losses shall be reduced by the amount we pay in excess of our share."
+        },
+        {
+          "labels": [
+            "6",
+            "c",
+            "(6)",
+            "(d)"
+          ],
+          "text": "The appraisal decision is binding upon you and us and is not otherwise reviewable or appealable except as provided by Condition 11.g. and 11.h."
+        }
+      ],
+      "schedule_key": null,
+      "method": "rule",
+      "confidence": 0.9,
+      "status": "resolved",
+      "notes": [
+        "section CONDITIONS + path 6"
+      ],
+      "source_page": 1,
+      "directive": "The following section c. is added to Loss Settlement Condition 6.:"
+    },
+    {
+      "op_id": "TWIA-802@2019-11#4",
+      "endorsement_form_id": "TWIA-802",
+      "endorsement_edition": "2019-11",
+      "op": "ADD",
+      "target_ref": "the DEDUCTIBLE clause",
+      "target_path": "DEDUCTIBLE",
+      "target_term": null,
+      "new_label": null,
+      "new_text": "We may refuse to pay Replacement Cost Coverage under this endorsement until we receive reasonable proof of payment by you of any Deductible applicable to the claim. Reasonable proof of payment includes a canceled check, money order receipt, credit card statement, and a copy of an executed installment plan contract or other financing arrangement that requires full payment of the deductible over time.",
+      "new_clauses": [
+        {
+          "labels": [],
+          "text": "We may refuse to pay Replacement Cost Coverage under this endorsement until we receive reasonable proof of payment by you of any Deductible applicable to the claim. Reasonable proof of payment includes a canceled check, money order receipt, credit card statement, and a copy of an executed installment plan contract or other financing arrangement that requires full payment of the deductible over time."
+        }
+      ],
+      "schedule_key": null,
+      "method": "rule",
+      "confidence": 0.8,
+      "status": "resolved",
+      "notes": [
+        "section by name DEDUCTIBLE"
+      ],
+      "source_page": 2,
+      "directive": "The following is added to the DEDUCTIBLE clause:"
+    }
+  ],
+  "scanned": false,
+  "notes": []
+}

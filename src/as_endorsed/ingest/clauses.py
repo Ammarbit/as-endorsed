@@ -3,13 +3,20 @@
 Insurance forms are consistently numbered, which is the one gift the domain
 gives you. The parser is a state machine over layout lines:
 
-* A line that starts with a label (I. / A. / 1. / a. / (1) / (a)) opens a clause,
-  provided the label is the *expected next* label at that level. That sequence
-  check is what keeps "2. " inside running text from opening a bogus clause.
+* A line that starts with a label (I. / A. / 1. / a. / (1) / (a) / (i)) opens a
+  clause, provided the label is the *expected next* label at its level. That
+  sequence check is what keeps "2. " inside running text from opening a bogus
+  clause.
+* A short uppercase line isolated by paragraph gaps opens a section too, for
+  forms that head sections with words (COVERAGES, CONDITIONS) instead of Roman
+  numerals. Its label is a slug of the heading.
 * A line without a label continues the deepest open clause whose label sits to
   the left of the line. Wrapped text indents one step past its own label, so
   trailing text that belongs to a parent (after the parent's children) lands on
   the parent, not on the last child.
+* Unlabeled text directly under a section is split into paragraph nodes on
+  vertical gaps, so a definitions section written as quoted-term paragraphs
+  still yields one clause per definition.
 
 No LLM is involved. Where this parser fails it fails loudly, in `warnings`.
 """
@@ -17,13 +24,14 @@ No LLM is involved. Where this parser fails it fails loudly, in `warnings`.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from as_endorsed.ingest.pdf import Line, extract_lines
 from as_endorsed.models import BBox, Clause, ParsedForm
 
 LEVEL_ROMAN, LEVEL_UPPER, LEVEL_NUM, LEVEL_LOWER, LEVEL_PNUM, LEVEL_PLOWER, LEVEL_PROMAN = range(7)
+LEVEL_PARA = 1  # paragraph nodes sit directly under a section
 LEVEL_NAMES = ["section", "upper", "num", "lower", "paren-num", "paren-lower", "paren-roman"]
 
 LABEL_RE = re.compile(
@@ -33,6 +41,11 @@ ROMANS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XI
 LOWER_ROMANS = [r.lower() for r in ROMANS]
 FIRST = {LEVEL_ROMAN: "I", LEVEL_UPPER: "A", LEVEL_NUM: "1", LEVEL_LOWER: "a", LEVEL_PNUM: "1", LEVEL_PLOWER: "a", LEVEL_PROMAN: "i"}
 INDENT_SLACK = 3.0  # points
+PARA_GAP = 19.0  # minimum baseline gap that separates paragraphs; scaled up where leading is larger
+PARA_GAP_FACTOR = 1.45  # a paragraph break is at least this many times the local body leading
+HEADING_RE = re.compile(r"^[A-Z][A-Z ,&'()\-/]{2,44}$")
+MIXED_HEADING_RE = re.compile(r"^[A-Z]{3,}\b[^.;:]{0,40}$")  # 'COVERAGE A (Dwelling)'
+TOC_LINE_RE = re.compile(r"(\.\s?){4,}\s*\d+\s*$|…{2,}")
 
 
 def successor(level: int, label: str) -> str | None:
@@ -44,7 +57,7 @@ def successor(level: int, label: str) -> str | None:
         return LOWER_ROMANS[i + 1] if i + 1 < len(LOWER_ROMANS) else None
     if level in (LEVEL_NUM, LEVEL_PNUM):
         return str(int(label) + 1)
-    if label == "z" or label == "Z":
+    if label in ("z", "Z"):
         return None
     return chr(ord(label) + 1)
 
@@ -82,12 +95,18 @@ def classify(label: str, rest: str) -> list[tuple[int, str]]:
     return [(LEVEL_UPPER, core)]
 
 
+def slug(heading: str) -> str:
+    """'COVERAGE A (Dwelling)' -> 'COVERAGE-A-DWELLING'."""
+    return re.sub(r"-+", "-", re.sub(r"[^A-Z0-9]+", "-", heading.upper())).strip("-")
+
+
 @dataclass
 class _Node:
     level: int
     label: str
     label_x: float  # column-relative x of the label
     parent: "_Node | None"
+    kind: str = "label"  # label | heading | para
     lines: list[Line] = field(default_factory=list)
     rel_xs: list[float] = field(default_factory=list)
     own_line_count_before_children: int = 0
@@ -104,7 +123,7 @@ class _Node:
 
 
 def _path_label(n: _Node) -> str:
-    if n.level in (LEVEL_PNUM, LEVEL_PLOWER, LEVEL_PROMAN):
+    if n.level in (LEVEL_PNUM, LEVEL_PLOWER, LEVEL_PROMAN) and n.kind == "label":
         return f"({n.label})"
     return n.label
 
@@ -124,53 +143,156 @@ def _column_bases(lines: list[Line]) -> dict[int, float]:
     return bases
 
 
+def _local_leading(lines: list[Line]) -> dict[tuple[int, int], float]:
+    """Median baseline-to-baseline distance per (page, column): the body leading there."""
+    gaps: dict[tuple[int, int], list[float]] = {}
+    for a, b in zip(lines, lines[1:]):
+        if a.page == b.page and a.col == b.col and 4 < b.y0 - a.y0 < 40:
+            gaps.setdefault((a.page, a.col), []).append(b.y0 - a.y0)
+    out: dict[tuple[int, int], float] = {}
+    for key, g in gaps.items():
+        g.sort()
+        out[key] = g[len(g) // 2]
+    return out
+
+
+def _para_threshold(leading: dict[tuple[int, int], float], ln: Line) -> float:
+    return max(PARA_GAP, PARA_GAP_FACTOR * leading.get((ln.page, ln.col), 12.0))
+
+
+def _is_heading_line(lines: list[Line], i: int, leading: dict[tuple[int, int], float]) -> bool:
+    """Short heading-shaped line, isolated from its neighbours by paragraph gaps.
+
+    Uppercase ('CONDITIONS') or leading-uppercase-word ('COVERAGE A (Dwelling)'),
+    never ending mid-list, never containing a sentence break.
+    """
+    ln = lines[i]
+    text = _clean(ln.text)
+    if LABEL_RE.match(ln.text) or sum(c.isalpha() for c in text) < 3:
+        return False
+    if not (HEADING_RE.match(text) or MIXED_HEADING_RE.match(text)):
+        return False
+    if text.endswith((",", "/", "-", ";", ":", ".")) or ". " in text or len(text.split()) > 7:
+        return False
+    threshold = _para_threshold(leading, ln)
+    prev = lines[i - 1] if i > 0 else None
+    nxt = lines[i + 1] if i + 1 < len(lines) else None
+    before_ok = prev is None or prev.page != ln.page or prev.col != ln.col or ln.y0 - prev.y0 >= threshold
+    after_ok = nxt is None or nxt.page != ln.page or nxt.col != ln.col or nxt.y0 - ln.y0 >= threshold
+    return before_ok and after_ok
+
+
 def parse_form(
     pdf_path: str | Path,
     *,
     form_id: str,
     edition: str,
     title: str,
+    strict_sequence: bool = True,
+    root_paragraphs: bool = False,
 ) -> ParsedForm:
     lines, npages = extract_lines(pdf_path)
+    return parse_lines(
+        lines, npages, pdf_path=str(pdf_path), form_id=form_id, edition=edition, title=title,
+        strict_sequence=strict_sequence, root_paragraphs=root_paragraphs,
+    )
+
+
+def parse_lines(
+    lines: list[Line],
+    npages: int,
+    *,
+    pdf_path: str,
+    form_id: str,
+    edition: str,
+    title: str,
+    strict_sequence: bool = True,
+    root_paragraphs: bool = False,
+) -> ParsedForm:
+    """Build the clause tree.
+
+    `strict_sequence=False` accepts any label regardless of sequence; use it for
+    endorsement bodies, which restate arbitrary fragments of the base form.
+    `root_paragraphs=True` turns text before the first section into paragraph
+    nodes instead of a preamble string, so directives outside any heading are
+    still addressable clauses.
+    """
+    lines = [ln for ln in lines if not TOC_LINE_RE.search(ln.text)]
     bases = _column_bases(lines)
+    leading = _local_leading(lines)
     warnings: list[str] = []
     preamble: list[str] = []
     roots: list[_Node] = []
     order: list[_Node] = []
     stack: list[_Node] = []
+    para_counts: dict[int, int] = {}
+    prev: Line | None = None
 
-    for ln in lines:
+    for i, ln in enumerate(lines):
         rel_x = ln.x0 - bases.get(ln.col, ln.x0)
+        same_column = prev is not None and prev.page == ln.page and prev.col == ln.col
+        gap = ln.y0 - prev.y0 if same_column else None
+        # A column or page break is a paragraph break only when the previous line
+        # finished a sentence and this one starts fresh.
+        column_break_para = (
+            prev is not None
+            and not same_column
+            and _clean(prev.text).endswith((".", ":", ";"))
+            and (ln.text.lstrip()[:1].isupper() or ln.text.lstrip()[:1] in "“\"")
+        )
+        prev = ln
         m = LABEL_RE.match(ln.text)
         if m:
             candidates = classify(m.group("label"), m.group("rest"))
             local_warnings: list[str] = []
+            labelled_stack = [n for n in stack if n.kind != "para"]
             accepted = next(
-                ((lvl, c) for lvl, c in candidates if _accepts_label(stack, lvl, c, rel_x, local_warnings, ln)),
+                ((lvl, c) for lvl, c in candidates
+                 if not strict_sequence or _accepts_label(labelled_stack, lvl, c, rel_x, local_warnings, ln)),
                 None,
             )
             if accepted is None:
                 warnings.extend(local_warnings)
             else:
                 level, core = accepted
-                while stack and stack[-1].level >= level:
+                while stack and (stack[-1].kind == "para" or stack[-1].level >= level):
                     stack.pop()
-                parent = stack[-1] if stack else None
-                node = _Node(level, core, rel_x, parent)
-                if parent is not None:
-                    if not parent.has_children:
-                        parent.own_line_count_before_children = len(parent.lines)
-                    parent.has_children = True
-                else:
-                    roots.append(node)
-                node.lines.append(replace_text(ln, m.group("rest")))
+                node = _open(stack, roots, order, level, core, rel_x, "label")
+                node.lines.append(replace(ln, text=m.group("rest")))
                 node.rel_xs.append(rel_x)
-                stack.append(node)
-                order.append(node)
                 continue
+        elif _is_heading_line(lines, i, leading):
+            stack.clear()
+            node = _open(stack, roots, order, LEVEL_ROMAN, slug(_clean(ln.text)), rel_x, "heading")
+            node.lines.append(ln)
+            node.rel_xs.append(rel_x)
+            continue
+
         # continuation
         if not stack:
-            preamble.append(_clean(ln.text))
+            if root_paragraphs:
+                n = para_counts.get(0, 0) + 1
+                para_counts[0] = n
+                node = _open(stack, roots, order, LEVEL_PARA, f"p{n}", rel_x, "para")
+                node.lines.append(ln)
+                node.rel_xs.append(rel_x)
+            else:
+                preamble.append(_clean(ln.text))
+            continue
+        top = stack[-1]
+        under_section = top.kind == "para" or top.level == LEVEL_ROMAN
+        big_gap = gap is not None and gap >= _para_threshold(leading, ln)
+        starts_para = under_section and (big_gap or column_break_para)
+        if starts_para or (top.level == LEVEL_ROMAN and top.kind == "heading" and not top.has_children and len(top.lines) == 1):
+            if top.kind == "para":
+                stack.pop()
+            section = stack[-1] if stack else None
+            key = id(section) if section is not None else 0
+            n = para_counts.get(key, 0) + 1
+            para_counts[key] = n
+            node = _open(stack, roots, order, LEVEL_PARA, f"p{n}", rel_x, "para")
+            node.lines.append(ln)
+            node.rel_xs.append(rel_x)
             continue
         target = _continuation_target(stack, rel_x)
         while stack[-1] is not target:
@@ -178,12 +300,12 @@ def parse_form(
         target.lines.append(ln)
         target.rel_xs.append(rel_x)
 
-    clauses = [_to_clause(n, form_id, edition, roots) for n in order]
+    clauses = [_to_clause(n, form_id, edition) for n in order]
     return ParsedForm(
         form_id=form_id,
         edition=edition,
         title=title,
-        source_pdf=str(pdf_path),
+        source_pdf=pdf_path,
         pages=npages,
         preamble=" ".join(p for p in preamble if p),
         clauses=clauses,
@@ -191,20 +313,27 @@ def parse_form(
     )
 
 
-def replace_text(ln: Line, text: str) -> Line:
-    from dataclasses import replace
-
-    return replace(ln, text=text)
+def _open(stack: list[_Node], roots: list[_Node], order: list[_Node], level: int, label: str, rel_x: float, kind: str) -> _Node:
+    parent = stack[-1] if stack else None
+    node = _Node(level, label, rel_x, parent, kind)
+    if parent is not None:
+        if not parent.has_children:
+            parent.own_line_count_before_children = len(parent.lines)
+        parent.has_children = True
+    else:
+        roots.append(node)
+    stack.append(node)
+    order.append(node)
+    return node
 
 
 def _accepts_label(
     stack: list[_Node], level: int, core: str, rel_x: float, warnings: list[str], ln: Line
 ) -> bool:
     """Only open a clause when this is the label we expect next at its level."""
-    open_at_level = next((n for n in reversed(stack) if n.level == level), None)
+    open_at_level = next((n for n in reversed(stack) if n.level == level and n.kind == "label"), None)
     if open_at_level is not None:
         expected = successor(level, open_at_level.label)
-        # A shallower sibling may have closed this level; then a fresh sequence is fine.
         if core == expected:
             return True
         if core == FIRST[level] and _level_was_closed(stack, level):
@@ -235,12 +364,18 @@ def _level_was_closed(stack: list[_Node], level: int) -> bool:
 
 def _continuation_target(stack: list[_Node], rel_x: float) -> _Node:
     for n in reversed(stack):
-        if n.label_x < rel_x - INDENT_SLACK:
+        if n.kind == "label" and n.label_x < rel_x - INDENT_SLACK:
             return n
     return stack[-1]
 
 
-def _to_clause(n: _Node, form_id: str, edition: str, roots: list[_Node]) -> Clause:
+def _section_of(n: _Node) -> _Node:
+    while n.parent is not None:
+        n = n.parent
+    return n
+
+
+def _to_clause(n: _Node, form_id: str, edition: str) -> Clause:
     own_count = n.own_line_count_before_children if n.has_children else len(n.lines)
     text = _clean(" ".join(l.text for l in n.lines))
     head_text = _clean(" ".join(l.text for l in n.lines[:own_count]))
@@ -251,22 +386,24 @@ def _to_clause(n: _Node, form_id: str, edition: str, roots: list[_Node]) -> Clau
     heading = None
     first = _clean(n.lines[0].text)
     short = 0 < len(first) <= 70 and not first.endswith((".", ";", ",", ":"))
-    if n.level == LEVEL_ROMAN:
+    if n.level == LEVEL_ROMAN or n.kind == "heading":
         heading = first
-    elif short and (own_count == 1 or n.rel_xs[1] <= n.label_x + INDENT_SLACK):
+    elif n.kind == "label" and short and (own_count == 1 or n.rel_xs[1] <= n.label_x + INDENT_SLACK):
         heading = first
 
     term = None
-    section = n
-    while section.parent is not None:
-        section = section.parent
-    in_definitions = "DEFINITION" in _clean(" ".join(l.text for l in section.lines[:1])).upper()
-    if in_definitions and n.level == LEVEL_NUM:
+    section = _section_of(n)
+    in_definitions = "DEFINITION" in _clean(section.lines[0].text).upper()
+    if in_definitions and n.kind == "label" and n.level == LEVEL_NUM:
         tm = re.match(r"^([A-Z][A-Za-z0-9'() \-/]{1,50}?)(?:\.\s|$)", head_text)
         if tm:
             term = tm.group(1).strip()
         elif heading:
             term = heading
+    elif in_definitions and n.kind == "para":
+        tm = re.match(r"^[“\"]([^”\"]{2,60})[”\"]", head_text)
+        if tm:
+            term = tm.group(1).strip()
 
     per_page: dict[int, list[float]] = {}
     for l in n.lines:

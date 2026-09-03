@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="AS_ENDORSED_", env_file=".env", extra="ignore")
 
     data_dir: Path = REPO_ROOT / "data"
+    llm_model: str = "claude-opus-5"
+    llm_enabled: bool = True  # only takes effect when credentials and the anthropic package are present
 
     @property
     def raw_dir(self) -> Path:
@@ -25,6 +27,14 @@ class Settings(BaseSettings):
     @property
     def synthetic_dir(self) -> Path:
         return self.data_dir / "synthetic"
+
+    @property
+    def endorse_dir(self) -> Path:
+        return self.data_dir / "endorse"
+
+    @property
+    def resolved_dir(self) -> Path:
+        return self.data_dir / "resolved"
 
 
 settings = Settings()

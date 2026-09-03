@@ -1,0 +1,31 @@
+{
+  "account_id": "SYN-00028",
+  "base_form_key": "NFIP-DWELLING@2021-10",
+  "as_of": "2027-05-09",
+  "changed": [
+    {
+      "path": "IV.14",
+      "parent_path": "IV",
+      "base_clause_id": "NFIP-DWELLING@2021-10:IV.14",
+      "text_as_endorsed": "Hot tubs and spas that are not bathroom fixtures, and swimming pools, and their equipment, such as, but not limited to, heaters, filters, pumps, and pipes, wherever located.",
+      "original_text": "Hot tubs and spas that are not bathroom fixtures, and swimming pools, and their equipment, such as, but not limited to, heaters, filters, pumps, and pipes, wherever located.",
+      "active": false,
+      "added_by": null,
+      "lineage": [
+        {
+          "op_id": "SYN-END-02@2026-01#1",
+          "endorsement_key": "SYN-END-02@2026-01",
+          "op": "DELETE",
+          "effective_date": "2026-05-10"
+        }
+      ],
+      "flags": []
+    }
+  ],
+  "conflicts": [],
+  "unresolved": [],
+  "held": [],
+  "applied_op_ids": [
+    "SYN-END-02@2026-01#1"
+  ]
+}

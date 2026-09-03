@@ -16,6 +16,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from as_endorsed.synth.endorsements import BY_ID, EDITION as END_EDITION, LIBRARY, SCHEDULE_VALUES
+
 DWELLING_FORM = {"form_id": "NFIP-DWELLING", "edition": "2021-10", "title": "Standard Flood Insurance Policy, Dwelling Form (F-122)"}
 
 # NFIP residential maximums and the deductible menu as of Risk Rating 2.0.
@@ -75,6 +77,20 @@ class ScheduledForm(BaseModel):
     title: str
 
 
+class ScheduledEndorsement(BaseModel):
+    """A synthetic endorsement form attached to the policy."""
+
+    form_id: str
+    edition: str
+    title: str
+    effective_date: date
+    schedule_values: dict[str, str] = Field(default_factory=dict)
+
+    @property
+    def key(self) -> str:
+        return f"{self.form_id}@{self.edition}"
+
+
 class MidTermChange(BaseModel):
     """A General Change Endorsement: one field changes as of an effective date."""
 
@@ -100,6 +116,13 @@ class FloodPolicy(BaseModel):
     agency: str
     forms_schedule: list[ScheduledForm]
     endorsements: list[MidTermChange] = Field(default_factory=list)
+    endorsement_forms: list[ScheduledEndorsement] = Field(default_factory=list)
+
+    def has_endorsement(self, form_id: str) -> bool:
+        return any(e.form_id == form_id for e in self.endorsement_forms)
+
+    def endorsement(self, form_id: str) -> ScheduledEndorsement | None:
+        return next((e for e in self.endorsement_forms if e.form_id == form_id), None)
 
     def coverage(self, kind: str) -> CoverageLine:
         return next(c for c in self.coverages if c.coverage == kind)
@@ -189,8 +212,36 @@ def generate_account(i: int, master_seed: int) -> Account:
 
     if rng.random() < 0.4:
         policy.endorsements.append(_mid_term_change(rng, policy))
+    policy.endorsement_forms = _attach_endorsements(rng, policy)
 
     return Account(account_id=account_id, seed=seed, policy=policy)
+
+
+def _attach_endorsements(rng: random.Random, policy: FloodPolicy) -> list[ScheduledEndorsement]:
+    """Attach zero to three synthetic endorsements. A quarter of accounts get the
+    conflicting basement pair (SYN-END-01 at issue, SYN-END-06 mid-term) so the
+    later-date precedence rule is exercised on real data."""
+    if rng.random() < 0.25:
+        return []
+    chosen: list[tuple[str, date]] = []
+    if rng.random() < 0.25:
+        chosen.append(("SYN-END-01", policy.term_start))
+        chosen.append(("SYN-END-06", policy.term_start + timedelta(days=rng.randint(45, 240))))
+    pool = [e.form_id for e in LIBRARY if e.form_id not in {c[0] for c in chosen} and e.form_id not in ("SYN-END-01", "SYN-END-06")]
+    if not chosen or rng.random() < 0.5:
+        pool = pool + ["SYN-END-01", "SYN-END-06"] if not chosen else pool
+    for form_id in rng.sample(pool, k=min(len(pool), rng.randint(1, 3))):
+        if form_id in ("SYN-END-01", "SYN-END-06") and any(c[0] in ("SYN-END-01", "SYN-END-06") for c in chosen):
+            continue
+        effective = policy.term_start if rng.random() < 0.65 else policy.term_start + timedelta(days=rng.randint(30, 200))
+        chosen.append((form_id, effective))
+    out = []
+    for form_id, effective in chosen:
+        spec = BY_ID[form_id]
+        values = {spec.schedule_prompt: rng.choice(SCHEDULE_VALUES)} if spec.schedule_prompt else {}
+        out.append(ScheduledEndorsement(form_id=form_id, edition=END_EDITION, title=spec.title, effective_date=effective, schedule_values=values))
+    out.sort(key=lambda e: (e.effective_date, e.form_id))
+    return out
 
 
 def _mid_term_change(rng: random.Random, policy: FloodPolicy) -> MidTermChange:

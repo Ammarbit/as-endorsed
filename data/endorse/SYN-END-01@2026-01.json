@@ -1,0 +1,36 @@
+{
+  "endorsement_form_id": "SYN-END-01",
+  "endorsement_edition": "2026-01",
+  "ops": [
+    {
+      "op_id": "SYN-END-01@2026-01#1",
+      "endorsement_form_id": "SYN-END-01",
+      "endorsement_edition": "2026-01",
+      "op": "REPLACE",
+      "target_ref": "Paragraph II.C.5 (Basement) of Section II. DEFINITIONS",
+      "target_path": "II.C.5",
+      "target_term": null,
+      "new_label": null,
+      "new_text": "5. Basement. Any area of a building, including any sunken room or sunken portion of a room, having its floor below ground level on all sides, and any area having a finished floor more than two feet below the adjoining exterior grade on at least three sides.",
+      "new_clauses": [
+        {
+          "labels": [
+            "5"
+          ],
+          "text": "Basement. Any area of a building, including any sunken room or sunken portion of a room, having its floor below ground level on all sides, and any area having a finished floor more than two feet below the adjoining exterior grade on at least three sides."
+        }
+      ],
+      "schedule_key": null,
+      "method": "rule",
+      "confidence": 0.95,
+      "status": "resolved",
+      "notes": [
+        "explicit path II.C.5"
+      ],
+      "source_page": 1,
+      "directive": "Paragraph II.C.5 (Basement) of Section II. DEFINITIONS is replaced by the following:"
+    }
+  ],
+  "scanned": false,
+  "notes": []
+}

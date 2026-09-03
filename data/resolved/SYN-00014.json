@@ -1,0 +1,87 @@
+{
+  "account_id": "SYN-00014",
+  "base_form_key": "NFIP-DWELLING@2021-10",
+  "as_of": "2027-05-04",
+  "changed": [
+    {
+      "path": "II.C.5",
+      "parent_path": "II.C",
+      "base_clause_id": "NFIP-DWELLING@2021-10:II.C.5",
+      "text_as_endorsed": "Basement. Any area of a building having its floor below ground level on all sides. A crawlspace, or an area with its floor at or above the lowest adjacent grade on any side, is not a basement.",
+      "original_text": "Basement. Any area of a building, including any sunken room or sunken portion of a room, having its floor below ground level on all sides.",
+      "active": true,
+      "added_by": null,
+      "lineage": [
+        {
+          "op_id": "SYN-END-01@2026-01#1",
+          "endorsement_key": "SYN-END-01@2026-01",
+          "op": "REPLACE",
+          "effective_date": "2026-05-05"
+        },
+        {
+          "op_id": "SYN-END-06@2026-01#1",
+          "endorsement_key": "SYN-END-06@2026-01",
+          "op": "REPLACE",
+          "effective_date": "2026-12-09"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "path": "UNRESOLVED.SYN-END-08@2026-01.1",
+      "parent_path": null,
+      "base_clause_id": null,
+      "text_as_endorsed": "The most we will pay for loss caused by mudflow in any one occurrence is $5,000. This sublimit does not increase the limit of liability shown on the Declarations Page.",
+      "original_text": null,
+      "active": true,
+      "added_by": "SYN-END-08@2026-01",
+      "lineage": [
+        {
+          "op_id": "SYN-END-08@2026-01#1",
+          "endorsement_key": "SYN-END-08@2026-01",
+          "op": "ADD",
+          "effective_date": "2026-05-05"
+        }
+      ],
+      "flags": [
+        "unresolved target: none given",
+        "directive names no target clause"
+      ]
+    }
+  ],
+  "conflicts": [],
+  "unresolved": [
+    {
+      "op_id": "SYN-END-08@2026-01#1",
+      "endorsement_form_id": "SYN-END-08",
+      "endorsement_edition": "2026-01",
+      "op": "ADD",
+      "target_ref": null,
+      "target_path": null,
+      "target_term": null,
+      "new_label": null,
+      "new_text": "The most we will pay for loss caused by mudflow in any one occurrence is $5,000. This sublimit does not increase the limit of liability shown on the Declarations Page.",
+      "new_clauses": [
+        {
+          "labels": [],
+          "text": "The most we will pay for loss caused by mudflow in any one occurrence is $5,000. This sublimit does not increase the limit of liability shown on the Declarations Page."
+        }
+      ],
+      "schedule_key": null,
+      "method": "rule",
+      "confidence": 0.0,
+      "status": "unresolved",
+      "notes": [
+        "directive names no target clause"
+      ],
+      "source_page": 1,
+      "directive": "This policy is amended as follows:"
+    }
+  ],
+  "held": [],
+  "applied_op_ids": [
+    "SYN-END-01@2026-01#1",
+    "SYN-END-08@2026-01#1",
+    "SYN-END-06@2026-01#1"
+  ]
+}

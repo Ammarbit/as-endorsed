@@ -1,0 +1,36 @@
+{
+  "endorsement_form_id": "SYN-END-06",
+  "endorsement_edition": "2026-01",
+  "ops": [
+    {
+      "op_id": "SYN-END-06@2026-01#1",
+      "endorsement_form_id": "SYN-END-06",
+      "endorsement_edition": "2026-01",
+      "op": "REPLACE",
+      "target_ref": "Paragraph II.C.5 (Basement) of Section II. DEFINITIONS",
+      "target_path": "II.C.5",
+      "target_term": null,
+      "new_label": null,
+      "new_text": "5. Basement. Any area of a building having its floor below ground level on all sides. A crawlspace, or an area with its floor at or above the lowest adjacent grade on any side, is not a basement.",
+      "new_clauses": [
+        {
+          "labels": [
+            "5"
+          ],
+          "text": "Basement. Any area of a building having its floor below ground level on all sides. A crawlspace, or an area with its floor at or above the lowest adjacent grade on any side, is not a basement."
+        }
+      ],
+      "schedule_key": null,
+      "method": "rule",
+      "confidence": 0.95,
+      "status": "resolved",
+      "notes": [
+        "explicit path II.C.5"
+      ],
+      "source_page": 1,
+      "directive": "Paragraph II.C.5 (Basement) of Section II. DEFINITIONS is deleted and replaced by the following:"
+    }
+  ],
+  "scanned": false,
+  "notes": []
+}

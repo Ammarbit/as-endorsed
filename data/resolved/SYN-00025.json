@@ -1,0 +1,76 @@
+{
+  "account_id": "SYN-00025",
+  "base_form_key": "NFIP-DWELLING@2021-10",
+  "as_of": "2026-06-08",
+  "changed": [
+    {
+      "path": "II.C.5",
+      "parent_path": "II.C",
+      "base_clause_id": "NFIP-DWELLING@2021-10:II.C.5",
+      "text_as_endorsed": "Basement. Any area of a building having its floor below ground level on all sides. A crawlspace, or an area with its floor at or above the lowest adjacent grade on any side, is not a basement.",
+      "original_text": "Basement. Any area of a building, including any sunken room or sunken portion of a room, having its floor below ground level on all sides.",
+      "active": true,
+      "added_by": null,
+      "lineage": [
+        {
+          "op_id": "SYN-END-01@2026-01#1",
+          "endorsement_key": "SYN-END-01@2026-01",
+          "op": "REPLACE",
+          "effective_date": "2025-06-09"
+        },
+        {
+          "op_id": "SYN-END-06@2026-01#1",
+          "endorsement_key": "SYN-END-06@2026-01",
+          "op": "REPLACE",
+          "effective_date": "2025-07-28"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "path": "IV.14",
+      "parent_path": "IV",
+      "base_clause_id": "NFIP-DWELLING@2021-10:IV.14",
+      "text_as_endorsed": "Hot tubs and spas that are not bathroom fixtures, and swimming pools, and their equipment, such as, but not limited to, heaters, filters, pumps, and pipes, wherever located.",
+      "original_text": "Hot tubs and spas that are not bathroom fixtures, and swimming pools, and their equipment, such as, but not limited to, heaters, filters, pumps, and pipes, wherever located.",
+      "active": false,
+      "added_by": null,
+      "lineage": [
+        {
+          "op_id": "SYN-END-02@2026-01#1",
+          "endorsement_key": "SYN-END-02@2026-01",
+          "op": "DELETE",
+          "effective_date": "2025-06-09"
+        }
+      ],
+      "flags": []
+    },
+    {
+      "path": "II.C.16",
+      "parent_path": "II.C",
+      "base_clause_id": "NFIP-DWELLING@2021-10:II.C.16",
+      "text_as_endorsed": "Elevated Building. A building that has no basement and that has its lowest elevated floor raised above ground level by foundation walls, shear walls, posts, piers, pilings, or columns. A building whose lowest floor is raised above ground level on a permanent pier foundation certified by a licensed engineer is an elevated building even if the enclosed area below the lowest floor exceeds 300 square feet, provided that area is used solely for parking, building access, or storage.",
+      "original_text": "Elevated Building. A building that has no basement and that has its lowest elevated floor raised above ground level by foundation walls, shear walls, posts, piers, pilings, or columns.",
+      "active": true,
+      "added_by": null,
+      "lineage": [
+        {
+          "op_id": "SYN-END-04@2026-01#1",
+          "endorsement_key": "SYN-END-04@2026-01",
+          "op": "AMEND_DEF",
+          "effective_date": "2025-06-09"
+        }
+      ],
+      "flags": []
+    }
+  ],
+  "conflicts": [],
+  "unresolved": [],
+  "held": [],
+  "applied_op_ids": [
+    "SYN-END-01@2026-01#1",
+    "SYN-END-02@2026-01#1",
+    "SYN-END-04@2026-01#1",
+    "SYN-END-06@2026-01#1"
+  ]
+}

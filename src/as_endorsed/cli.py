@@ -8,6 +8,7 @@ import typer
 from rich import print as rprint
 from rich.table import Table
 
+from as_endorsed.cli_endorse import endorse_app, resolve_cmd, review_cmd
 from as_endorsed.config import settings
 from as_endorsed.corpus import registry
 
@@ -16,6 +17,9 @@ corpus_app = typer.Typer(no_args_is_help=True, help="Fetch and list the public f
 synth_app = typer.Typer(no_args_is_help=True, help="Generate synthetic accounts and declarations.")
 app.add_typer(corpus_app, name="corpus")
 app.add_typer(synth_app, name="synth")
+app.add_typer(endorse_app, name="endorse")
+app.command("resolve")(resolve_cmd)
+app.command("review")(review_cmd)
 
 
 @corpus_app.command("list")
@@ -96,27 +100,32 @@ def synth_accounts(
 ) -> None:
     """Generate synthetic accounts: declarations JSON, rendered PDFs, and ground-truth Q&A."""
     from as_endorsed.synth.accounts import generate_accounts
-    from as_endorsed.synth.qa import questions_for
+    from as_endorsed.synth.endorsements import render_library
+    from as_endorsed.synth.qa import endorsement_questions, questions_for
     from as_endorsed.synth.render import render_declarations
 
     out = out or settings.synthetic_dir
     (out / "accounts").mkdir(parents=True, exist_ok=True)
     accounts = generate_accounts(n, seed=seed)
     qa_path = out / "qa.jsonl"
-    n_qa = 0
+    n_qa: Counter[str] = Counter()
     with qa_path.open("w", encoding="utf-8") as qa:
         for acct in accounts:
             (out / "accounts" / f"{acct.account_id}.json").write_text(acct.model_dump_json(indent=2), encoding="utf-8")
             if not no_pdf:
                 render_declarations(acct, out / "accounts" / f"{acct.account_id}.pdf")
-            for q in questions_for(acct):
+            for q in questions_for(acct) + endorsement_questions(acct):
                 qa.write(json.dumps(q, default=str) + "\n")
-                n_qa += 1
+                n_qa[f"{q['category']}/{q['difficulty']}"] += 1
     (out / "accounts.json").write_text(
         json.dumps([a.model_dump(mode="json") for a in accounts], indent=2), encoding="utf-8"
     )
+    if not no_pdf:
+        render_library(out / "endorsements")
     with_changes = sum(1 for a in accounts if a.policy.endorsements)
-    rprint(f"[green]✓[/] {len(accounts)} accounts ({with_changes} with mid-term changes), {n_qa} Q&A rows → {out}")
+    with_forms = sum(1 for a in accounts if a.policy.endorsement_forms)
+    rprint(f"[green]✓[/] {len(accounts)} accounts ({with_changes} with mid-term changes, {with_forms} with endorsement forms) → {out}")
+    rprint(f"   Q&A rows: {sum(n_qa.values())}  " + "  ".join(f"{k}={v}" for k, v in sorted(n_qa.items())))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,36 @@
+{
+  "endorsement_form_id": "SYN-END-05",
+  "endorsement_edition": "2026-01",
+  "ops": [
+    {
+      "op_id": "SYN-END-05@2026-01#1",
+      "endorsement_form_id": "SYN-END-05",
+      "endorsement_edition": "2026-01",
+      "op": "REPLACE",
+      "target_ref": "Paragraph III.C.2.a.(1) of Section III. PROPERTY INSURED",
+      "target_path": "III.C.2.a.(1)",
+      "target_term": null,
+      "new_label": null,
+      "new_text": "(1) We will pay up to $2,500 for costs you incur to protect the insured building from a flood or imminent danger of flood, for the following:",
+      "new_clauses": [
+        {
+          "labels": [
+            "(1)"
+          ],
+          "text": "We will pay up to $2,500 for costs you incur to protect the insured building from a flood or imminent danger of flood, for the following:"
+        }
+      ],
+      "schedule_key": null,
+      "method": "rule",
+      "confidence": 0.95,
+      "status": "resolved",
+      "notes": [
+        "explicit path III.C.2.a.(1)"
+      ],
+      "source_page": 1,
+      "directive": "Paragraph III.C.2.a.(1) of Section III. PROPERTY INSURED is replaced by the following:"
+    }
+  ],
+  "scanned": false,
+  "notes": []
+}

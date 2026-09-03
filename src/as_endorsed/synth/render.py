@@ -100,6 +100,11 @@ def render_declarations(acct: Account, out_path: str | Path) -> Path:
     fe_rows = [["Form", "Edition", "Title"]]
     for f in p.forms_schedule:
         fe_rows.append([f.form_id, f.edition, f.title])
+    for e in p.endorsement_forms:
+        extra = ""
+        if e.schedule_values:
+            extra = " Schedule: " + "; ".join(f"{k}: {v}" for k, v in e.schedule_values.items())
+        fe_rows.append([e.form_id, e.edition, Paragraph(escape(f"{e.title}, effective {e.effective_date:%B %d, %Y}.{extra}"), BODY)])
     for ch in p.endorsements:
         fe_rows.append([ch.endorsement_number, ch.effective_date.isoformat(), f"General Change Endorsement, effective {ch.effective_date:%B %d, %Y}"])
     fe = Table(fe_rows, colWidths=[1.6 * inch, 0.9 * inch, 4.3 * inch])

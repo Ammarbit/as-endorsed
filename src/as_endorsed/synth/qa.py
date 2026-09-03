@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 from as_endorsed.synth.accounts import Account
+from as_endorsed.synth.endorsements import LIBRARY
 
 FIELD_LABEL = {
     "building_limit": "building coverage limit",
@@ -58,4 +59,41 @@ def questions_for(acct: Account) -> list[dict]:
         rows.append(_row(acct, f"What was the {label} for {short} on {before.isoformat()}?", p.value_as_of(ch.field, before), field=ch.field, answer_type="money", as_of=before, difficulty="as-of"))
         rows.append(_row(acct, f"What is the {label} for {short} as of {ch.effective_date.isoformat()}?", p.value_as_of(ch.field, ch.effective_date), field=ch.field, answer_type="money", as_of=ch.effective_date, difficulty="as-of"))
         rows.append(_row(acct, f"Which endorsement changed the {label} on policy {p.policy_number}, and when did it take effect?", f"{ch.endorsement_number}, effective {ch.effective_date.isoformat()}", field="endorsements", answer_type="text", difficulty="as-of"))
+    return rows
+
+
+def endorsement_questions(acct: Account) -> list[dict]:
+    """Endorsement-resolved category: the answer depends on which synthetic
+    endorsements are attached and, for mid-term attachments, on the as-of date."""
+    p = acct.policy
+    attached = {e.form_id: e for e in p.endorsement_forms}
+    # The two basement amendments target the same clause; the later effective one controls.
+    basement = [attached[f] for f in ("SYN-END-01", "SYN-END-06") if f in attached]
+    basement_winner = max(basement, key=lambda e: (e.effective_date, e.form_id)).form_id if basement else None
+    rows: list[dict] = []
+    negatives_budget = 2
+    for i, spec in enumerate(LIBRARY):
+        e = attached.get(spec.form_id)
+        if spec.form_id in ("SYN-END-01", "SYN-END-06") and e is not None and spec.form_id != basement_winner:
+            continue
+        for t in spec.qa:
+            q = t.question.format(pn=p.policy_number, addr=p.property_location.one_line())
+            base_row = {
+                "account_id": acct.account_id, "policy_number": p.policy_number,
+                "category": "endorsement-resolved", "answer_type": t.answer_type,
+                "expected_paths": t.paths, "source_field": spec.form_id,
+            }
+            if e is not None:
+                answer = t.attached.format(schedule=next(iter(e.schedule_values.values()), ""))
+                rows.append({**base_row, "difficulty": "resolved", "question": q, "answer": answer,
+                             "expected_endorsements": [e.key], "as_of": None})
+                if e.effective_date > p.term_start:
+                    before = e.effective_date - timedelta(days=1)
+                    rows.append({**base_row, "difficulty": "as-of", "as_of": before,
+                                 "question": q[:-1] + f" as of {before.isoformat()}?",
+                                 "answer": t.not_attached, "expected_endorsements": []})
+            elif negatives_budget > 0 and (i + acct.seed) % 3 == 0:
+                negatives_budget -= 1
+                rows.append({**base_row, "difficulty": "negative", "question": q, "answer": t.not_attached,
+                             "expected_endorsements": [], "as_of": None})
     return rows

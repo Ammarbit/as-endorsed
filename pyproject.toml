@@ -17,6 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+llm = ["anthropic>=1.0"]
 
 [project.scripts]
 as-endorsed = "as_endorsed.cli:app"

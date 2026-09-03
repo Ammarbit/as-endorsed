@@ -1,0 +1,31 @@
+{
+  "account_id": "SYN-00007",
+  "base_form_key": "NFIP-DWELLING@2021-10",
+  "as_of": "2026-09-12",
+  "changed": [
+    {
+      "path": "II.C.16",
+      "parent_path": "II.C",
+      "base_clause_id": "NFIP-DWELLING@2021-10:II.C.16",
+      "text_as_endorsed": "Elevated Building. A building that has no basement and that has its lowest elevated floor raised above ground level by foundation walls, shear walls, posts, piers, pilings, or columns. A building whose lowest floor is raised above ground level on a permanent pier foundation certified by a licensed engineer is an elevated building even if the enclosed area below the lowest floor exceeds 300 square feet, provided that area is used solely for parking, building access, or storage.",
+      "original_text": "Elevated Building. A building that has no basement and that has its lowest elevated floor raised above ground level by foundation walls, shear walls, posts, piers, pilings, or columns.",
+      "active": true,
+      "added_by": null,
+      "lineage": [
+        {
+          "op_id": "SYN-END-04@2026-01#1",
+          "endorsement_key": "SYN-END-04@2026-01",
+          "op": "AMEND_DEF",
+          "effective_date": "2025-12-28"
+        }
+      ],
+      "flags": []
+    }
+  ],
+  "conflicts": [],
+  "unresolved": [],
+  "held": [],
+  "applied_op_ids": [
+    "SYN-END-04@2026-01#1"
+  ]
+}

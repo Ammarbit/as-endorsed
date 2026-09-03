@@ -115,7 +115,7 @@ def strip_repeating_lines(lines: list[Line], heights: dict[int, float]) -> list[
     for ln in lines:
         pages_by_key[_norm(ln.text)].add(ln.page)
     npages = len(heights)
-    threshold = max(3, int(0.4 * npages))
+    threshold = 2 if npages <= 3 else max(3, int(0.4 * npages))
     out: list[Line] = []
     for ln in lines:
         h = heights[ln.page]
