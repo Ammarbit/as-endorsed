@@ -4,19 +4,17 @@ The public instance runs on Azure Container Apps: https://as-endorsed.wittybay-f
 
 ## Azure Container Apps (what the live instance uses)
 
-Built in the cloud from the repo source, no local Docker needed. Scale-to-zero keeps idle cost at nothing; the consumption plan's free grant covers a demo's traffic, and the Basic container registry that holds the image is the one small fixed line item.
+The app runs the image that CI publishes to GitHub's registry (`ghcr.io/ammarbit/as-endorsed:latest`, set to public), so no Azure registry is involved. Scale-to-zero keeps idle cost at nothing and the consumption plan's free grant covers a demo's traffic.
 
 ```bash
 az group create -n as-endorsed-rg -l germanywestcentral
-az containerapp up --name as-endorsed --resource-group as-endorsed-rg --location germanywestcentral \
-  --environment as-endorsed-env --source . --ingress external --target-port 8000 \
-  --env-vars PORT=8000 AS_ENDORSED_DATA_DIR=/data FASTEMBED_CACHE_PATH=/data/models
-az containerapp update -n as-endorsed -g as-endorsed-rg --cpu 1.0 --memory 2.0Gi --min-replicas 0 --max-replicas 1
+az containerapp env create -n as-endorsed-env -g as-endorsed-rg -l germanywestcentral
+sh deploy/azure-deploy-when-public.sh            # waits for the GHCR image to be public, creates or updates the app, health-checks it
 az containerapp secret set -n as-endorsed -g as-endorsed-rg --secrets anthropic-key=<key>      # optional
 az containerapp update -n as-endorsed -g as-endorsed-rg --set-env-vars ANTHROPIC_API_KEY=secretref:anthropic-key
 ```
 
-Redeploy after a change with the same `az containerapp up ... --source .` command.
+Redeploy after a change: push to `main`, let the `image` workflow finish, then run the script again (it updates the existing app). Two Windows notes: run the script from Git Bash, and keep `MSYS_NO_PATHCONV=1` (the script sets it) or Git Bash rewrites `/data` in the arguments into a Windows path. `az containerapp up --source .` would be simpler, but ACR Tasks are not permitted on an Azure for Students subscription.
 
 The image is self-contained (see the Dockerfile): forms, parsed trees, synthetic accounts, extractions, resolutions and ONNX models are baked in at build time, so any host that runs a Docker image with about 2 GB of RAM works. Runtime needs no network unless `ANTHROPIC_API_KEY` is set.
 
