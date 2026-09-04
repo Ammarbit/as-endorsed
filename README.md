@@ -36,6 +36,8 @@ The other tabs show every clause the account's endorsements changed, the queue o
 
 Forty synthetic accounts built on real public forms, 636 questions with known correct answers, measured on an ordinary CPU. The live demo runs this exact configuration: no hosted model, no API key, so what you can click is what was measured.
 
+Every table below is produced by `as-endorsed eval run` and `as-endorsed eval generate`, and the output files record the commit and the time they were measured, so a number here can always be traced to the code that produced it. These were measured on 2026-09-04 at commit `8c32eb1`, and reproduced identically across three consecutive runs.
+
 The two kinds of measurement are kept apart on purpose, because they answer different questions.
 
 ### Retrieval: was the currently correct clause found?
@@ -163,18 +165,20 @@ Embedder `BAAI/bge-small-en-v1.5`, reranker `Xenova/ms-marco-MiniLM-L-6-v2`, k=5
 
 | Rung | Configuration | Chunks | hit@k | MRR | answer@k | p50 ms |
 |---|---|---:|---:|---:|---:|---:|
-| 1 | fixed windows + dense | 1,793 | 60.3% | 0.31 | 73.1% | 65 |
-| 2 | recursive windows + dense | 1,673 | 23.8% | 0.16 | 56.0% | 65 |
-| 3 | clause-aware + dense | 20,258 | 56.1% | 0.50 | 42.3% | 66 |
-| 4 | clause-aware + hybrid | 20,258 | 56.1% | 0.39 | 42.3% | 68 |
-| 5 | clause-aware + hybrid + rerank | 20,258 | 61.4% | 0.40 | 52.2% | 1342 |
-| 6 | **as endorsed** + hybrid + rerank | 20,102 | 83.1% | 0.72 | **89.0%** | 1357 |
-| 7 | as endorsed + contextual header | 20,102 | 83.1% | 0.71 | 89.0% | 1603 |
-| 7d | as endorsed + header + definitions | 20,102 | 83.1% | 0.71 | 89.0% | 1538 |
+| 1 | fixed windows + dense | 1,793 | 60.3% | 0.31 | 73.1% | 69 |
+| 2 | recursive windows + dense | 1,673 | 23.8% | 0.16 | 56.0% | 69 |
+| 3 | clause-aware + dense | 20,258 | 56.1% | 0.50 | 42.3% | 70 |
+| 4 | clause-aware + hybrid | 20,258 | 56.1% | 0.39 | 42.3% | 72 |
+| 5 | clause-aware + hybrid + rerank | 20,258 | 61.4% | 0.40 | 52.2% | 1394 |
+| 6 | **as endorsed** + hybrid + rerank | 20,102 | 83.1% | 0.72 | **89.0%** | 1409 |
+| 7 | as endorsed + contextual header | 20,102 | 83.1% | 0.71 | 89.0% | 1456 |
+| 7d | as endorsed + header + definitions | 20,102 | 83.1% | 0.71 | 89.0% | 1470 |
 
 `answer@k` is the metric that matters: a retrieved chunk carries the *currently correct* answer, not merely a relevant-looking one.
 
-Reading the table honestly. Rung 1 scores well because a 512-token window covers eight or more clauses at once and gets credit whenever the whole endorsement lands in one window; a generator would still have to reconcile the two. Hybrid search did not beat dense alone on these short paraphrased questions, and the contextual header neither helped nor hurt. Both are reported as measured. The move from rung 5 to rung 6 is the thesis: same retrieval, same reranker, but the index holds the policy as endorsed. Reranked latency is a cross-encoder scoring 30 candidates on a laptop CPU that was also running the test suite; uncontended it measures about 620 ms.
+Reading the table honestly. Rung 1 scores well because a 512-token window covers eight or more clauses at once and gets credit whenever the whole endorsement lands in one window; a generator would still have to reconcile the two. Hybrid search did not beat dense alone on these short paraphrased questions, and the contextual header neither helped nor hurt. Both are reported as measured. The move from rung 5 to rung 6 is the thesis: same retrieval, same reranker, but the index holds the policy as endorsed.
+
+Reranking dominates the cost: about 1.4 seconds at the median against roughly 70 milliseconds without it, because a cross-encoder scores 30 candidates on a laptop CPU. On this question set it bought 9 points of `answer@k` at rung 5 and nothing at all at rungs 6 and 7, so on a latency budget it is the first thing to drop. An earlier version of this README quoted 620 ms here, taken from a run under a configuration that cached query embeddings. Three consecutive runs since measure about 1.4 seconds, and that is the number that stands.
 
 ### Generation with checks
 
