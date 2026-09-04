@@ -57,7 +57,14 @@ class ClaudeGenerator:
         self.client = client
 
     def _parse(self, system: str, user: str, schema, *, effort: str, max_tokens: int = 8000):
-        import anthropic
+        # The SDK's typed errors drive the retry policy; with an injected client and no SDK
+        # installed (tests, minimal CI) nothing is retried and errors surface as-is.
+        try:
+            import anthropic
+
+            rate_limit, status_error = anthropic.RateLimitError, anthropic.APIStatusError
+        except ImportError:  # pragma: no cover
+            rate_limit = status_error = ()
 
         for attempt in range(2):
             try:
@@ -70,11 +77,11 @@ class ClaudeGenerator:
                     output_config={"effort": effort},
                 )
                 break
-            except anthropic.RateLimitError as e:
+            except rate_limit as e:
                 if attempt:
                     raise GeneratorError("rate limited twice") from e
                 time.sleep(int(e.response.headers.get("retry-after", "10")))
-            except anthropic.APIStatusError as e:
+            except status_error as e:
                 if attempt or e.status_code < 500:
                     raise GeneratorError(f"API error {e.status_code}: {e.message}") from e
                 time.sleep(2)
