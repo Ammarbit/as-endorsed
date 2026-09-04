@@ -16,6 +16,8 @@ dependencies = [
   "numpy>=2",
   "rank_bm25>=0.2",
   "fastembed>=0.8",
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
 ]
 
 [project.optional-dependencies]

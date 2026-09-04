@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>As-Endorsed</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="name">As-Endorsed</span><span class="tag">policies as they currently read</span></div>
+  <div class="health" id="health">connecting…</div>
+</header>
+
+<main class="layout">
+  <section class="ask">
+    <label class="lbl" for="account">Account</label>
+    <select id="account"></select>
+    <div class="acct-meta" id="acct-meta"></div>
+
+    <label class="lbl" for="question">Question</label>
+    <textarea id="question" rows="3" placeholder="How does the policy define 'basement'?"></textarea>
+
+    <div class="row">
+      <label class="lbl inline" for="asof">As of</label><input type="date" id="asof">
+      <label class="lbl inline" for="generator">Generator</label>
+      <select id="generator"></select>
+      <label class="check"><input type="checkbox" id="loop" checked> retry loop</label>
+      <button id="askbtn" class="primary">Ask</button>
+    </div>
+
+    <div id="answer" class="answer hidden">
+      <div class="status-row"><span class="status" id="status"></span><span class="route" id="route"></span></div>
+      <div class="answer-text" id="answer-text"></div>
+      <div class="reason" id="reason"></div>
+      <div class="lbl">Citations</div>
+      <div id="citations" class="citations"></div>
+      <div class="meta" id="meta"></div>
+    </div>
+
+    <div class="lbl">Try</div>
+    <div class="chips" id="examples"></div>
+  </section>
+
+  <section class="viewer">
+    <nav class="tabs">
+      <button class="tab active" data-tab="pdf">Policy PDF</button>
+      <button class="tab" data-tab="changes">As endorsed</button>
+      <button class="tab" data-tab="review">Review queue</button>
+      <button class="tab" data-tab="eval">Eval</button>
+    </nav>
+
+    <div class="pane" id="pane-pdf">
+      <div class="pdf-bar">
+        <span id="pdf-title" class="mono">no document</span>
+        <span class="spacer"></span>
+        <button id="prev">‹</button><span id="pageinfo" class="mono">– / –</span><button id="next">›</button>
+      </div>
+      <div class="pdf-wrap" id="pdf-wrap"><canvas id="pdf-canvas"></canvas><div id="overlay" class="overlay"></div></div>
+      <div class="clause-panel hidden" id="clause-panel">
+        <div class="lbl">Cited clause</div>
+        <div class="clause-path mono" id="clause-path"></div>
+        <div class="clause-versions" id="clause-versions"></div>
+      </div>
+    </div>
+
+    <div class="pane hidden" id="pane-changes">
+      <div class="pane-intro">Every clause this account's endorsements changed, with the printed text and the text as endorsed.</div>
+      <div id="changes"></div>
+    </div>
+
+    <div class="pane hidden" id="pane-review">
+      <div class="pane-intro">Endorsement operations the engine would not apply on its own: unresolved (attached as flagged siblings) and held (not applied).</div>
+      <div id="review"></div>
+    </div>
+
+    <div class="pane hidden" id="pane-eval">
+      <div id="eval"></div>
+    </div>
+  </section>
+</main>
+
+<script type="module" src="/static/app.js"></script>
+</body>
+</html>

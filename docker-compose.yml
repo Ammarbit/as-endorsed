@@ -1,4 +1,16 @@
 services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AS_ENDORSED_LLM_MODEL: ${AS_ENDORSED_LLM_MODEL:-claude-opus-5}
+    volumes:
+      - appdata:/data
+    # First start downloads the public forms and the embedding models, then generates
+    # the synthetic accounts; later starts reuse the volume.
+
   db:
     image: pgvector/pgvector:pg16
     environment:
@@ -17,3 +29,4 @@ services:
 
 volumes:
   pgdata:
+  appdata:

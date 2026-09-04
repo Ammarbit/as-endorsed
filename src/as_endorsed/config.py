@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     data_dir: Path = REPO_ROOT / "data"
     llm_model: str = "claude-opus-5"
     llm_enabled: bool = True  # only takes effect when credentials and the anthropic package are present
+    embedder: str = "bge"  # bge | hash
+    reranker: str = "minilm"  # minilm | bge | none
 
     @property
     def raw_dir(self) -> Path:

@@ -4,7 +4,44 @@ Retrieval over insurance policies **as they currently read**, not as the base fo
 
 A policy is a declarations page, one or more base coverage forms, and a schedule of endorsements that replace, delete, or add clauses. Flat-chunk RAG retrieves whichever version of a clause scores highest. This system resolves the endorsement stack at ingest and answers from the resolved policy, citing the clause, the form it lives in, and the endorsement that last changed it.
 
-> Status: **milestone 4 of 5** (corpus, clause parser, synthetic accounts, endorsement engine, retrieval ladder, cited generation with checks). See [Roadmap](#roadmap).
+> Status: **all five milestones built.** Runs locally or in one container; public deployment and the live Claude numbers wait on an account and an API key. See [Roadmap](#roadmap).
+
+## Results first
+
+Forty synthetic accounts on real public forms, 636 ground-truth questions, everything measured on a laptop CPU with no hosted model.
+
+| What | Number |
+|---|---:|
+| Declarations questions (router + typed lookup), exact match | **100%** |
+| Clause questions, correct chunk in top 5, clause-aware index + hybrid + rerank | 52% |
+| Same, with the index holding the policy **as endorsed** | **89%** |
+| Questions about an attached endorsement answered by a correct chunk, as-endorsed index | **100%** |
+| Endorsement ops resolved on real TWIA endorsements | 17 of 20, 3 held for review with reasons |
+| Money and short answers through the checked generator, exact | 100% (numeric guard: a fabricated amount is never released) |
+
+Full tables with every rung, the metric definitions and the honest misses are in [Retrieval ladder](#retrieval-ladder-and-eval-harness) and [Cited generation](#cited-generation-with-checks).
+
+## Run it
+
+```bash
+docker compose up api          # first start: downloads public forms + ONNX models, builds the synthetic book, ~5 min
+open http://localhost:8000
+```
+
+Or locally:
+
+```bash
+python -m venv .venv && .venv/Scripts/activate      # or source .venv/bin/activate
+pip install -e ".[dev]"
+as-endorsed bootstrap                               # corpus, parses, accounts, extraction, resolution, warm models
+uvicorn as_endorsed.api:app --port 8000
+```
+
+![As-Endorsed: a cited answer with the clause highlighted on the FEMA form](docs/screenshot.png)
+
+Pick an account, ask a question, and every citation opens the actual form page with the clause boxed, alongside the printed text and the text as endorsed. The other tabs show every clause the account's endorsements changed, the review queue of ops the engine would not apply on its own, and the eval tables. `GET /api/docs` has the OpenAPI schema; the interface is a thin framework-free client of that API so it ships in the same container.
+
+To use Claude for generation, set `ANTHROPIC_API_KEY` (and optionally `AS_ENDORSED_LLM_MODEL`); without it the extractive generator answers and says so. [`fly.toml`](fly.toml) deploys the container with a persistent volume.
 
 ## What works today
 
@@ -23,6 +60,7 @@ as-endorsed eval run               # build every index variant, run the ablation
 as-endorsed search "How does the policy define basement?" -a SYN-00001
 as-endorsed ask "Does the policy exclude hot tubs?" -a SYN-00001   # cited answer, checks shown
 as-endorsed eval generate --generator extractive                   # answer pipeline over the ground-truth set
+as-endorsed bootstrap                                              # all of the above that is missing, in order
 pytest
 ```
 
@@ -176,6 +214,8 @@ src/as_endorsed/
   retrieval/router.py    declarations router + structured lookup
   eval/harness.py        the ablation ladder and its metrics
   eval/generation.py     the answer-pipeline eval
+  api.py                 FastAPI: accounts, ask, PDFs, clauses with boxes, review, eval
+web/                     the reference client (pdf.js highlights the cited clause's boxes)
   generate/schema.py     Claim, Draft, Answer: the generator contract
   generate/pipeline.py   route → retrieve → draft → groundedness → numeric guard → loop
   generate/llm.py        Claude generator, grader and judge (structured outputs, injectable client)
@@ -200,7 +240,7 @@ Only public-domain or openly published forms are in the registry. FEMA's Standar
 2. **Endorsement engine** (done): operation extraction, target validation against the clause tree, precedence resolution, held-ops review list, TWIA policy and endorsement library, endorsement-resolved ground truth.
 3. **Retrieval ladder** (done): declarations router, hybrid dense + BM25 with reciprocal rank fusion, cross-encoder rerank, definition pull-in, as-of views, in-memory and pgvector indexes, eval harness with the ablation table.
 4. **Generation** (done): claim-level citations, groundedness check, numeric guard, abstention, one bounded retrieve-again loop, generation eval; Claude path built and stub-tested, live numbers pending credentials.
-5. **Ship**: Next.js UI with PDF highlight, Docker, public deployment, README led by the numbers.
+5. **Ship** (built): FastAPI + reference client with PDF clause highlighting from the parser's bounding boxes, Dockerfile and compose, `bootstrap` command, Fly config. Still open: a public URL (needs an account), the demo video, and OCR for scanned forms.
 
 ## Boundaries
 

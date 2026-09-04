@@ -405,12 +405,18 @@ def _to_clause(n: _Node, form_id: str, edition: str) -> Clause:
         if tm:
             term = tm.group(1).strip()
 
-    per_page: dict[int, list[float]] = {}
+    # One box per run of consecutive lines in the same page and column, so a clause
+    # that wraps from the foot of one column to the head of the next gets two tight
+    # boxes instead of one that spans the page.
+    bboxes: list[BBox] = []
     for l in n.lines:
-        box = per_page.setdefault(l.page, [l.x0, l.y0, l.x1, l.y1])
-        box[0], box[1] = min(box[0], l.x0), min(box[1], l.y0)
-        box[2], box[3] = max(box[2], l.x1), max(box[3], l.y1)
-    bboxes = [BBox(page=p, x0=b[0], y0=b[1], x1=b[2], y1=b[3]) for p, b in sorted(per_page.items())]
+        last = bboxes[-1] if bboxes else None
+        same_run = last is not None and last.page == l.page and abs(last.x0 - l.x0) < 60 and -8 <= l.y0 - last.y1 < 30
+        if same_run:
+            last.x0, last.y0 = min(last.x0, l.x0), min(last.y0, l.y0)
+            last.x1, last.y1 = max(last.x1, l.x1), max(last.y1, l.y1)
+        else:
+            bboxes.append(BBox(page=l.page, x0=l.x0, y0=l.y0, x1=l.x1, y1=l.y1))
 
     path = n.path
     return Clause(

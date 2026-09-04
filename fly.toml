@@ -1,0 +1,40 @@
+# Fly.io deployment. First boot runs `as-endorsed bootstrap` (downloads the public forms
+# and the ONNX models, generates the synthetic accounts) into the mounted volume, so give
+# it a few minutes before the health check turns green.
+#
+#   fly launch --no-deploy --copy-config
+#   fly volumes create appdata --size 3
+#   fly secrets set ANTHROPIC_API_KEY=...      # optional; the extractive generator works without it
+#   fly deploy
+
+app = "as-endorsed"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  AS_ENDORSED_DATA_DIR = "/data"
+  FASTEMBED_CACHE_PATH = "/data/models"
+
+[[mounts]]
+  source = "appdata"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10m"
+    method = "GET"
+    path = "/api/health"
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "2gb"

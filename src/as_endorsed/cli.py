@@ -134,5 +134,35 @@ def synth_accounts(
     rprint(f"   Q&A rows: {sum(n_qa.values())}  " + "  ".join(f"{k}={v}" for k, v in sorted(n_qa.items())))
 
 
+@app.command("bootstrap")
+def bootstrap(force: bool = typer.Option(False, help="Regenerate even if outputs exist")) -> None:
+    """Everything a fresh checkout needs before `uvicorn as_endorsed.api:app`: corpus, parses,
+    synthetic accounts, endorsement extraction, resolution, and warm models."""
+    from as_endorsed.endorse.pipeline import extract_registry_endorsement, extract_synthetic_library, resolve_all
+
+    rprint("[bold]1/6[/] corpus"); corpus_download()
+    if force or not (settings.parsed_dir / "NFIP-DWELLING@2021-10.json").exists():
+        rprint("[bold]2/6[/] parse"); parse(None, None, None, None, True, None)
+    if force or not (settings.synthetic_dir / "accounts.json").exists():
+        rprint("[bold]3/6[/] synthetic accounts"); synth_accounts(40, 20260903, None, False)
+    if force or not (settings.endorse_dir / "SYN-END-01@2026-01.json").exists():
+        rprint("[bold]4/6[/] endorsement extraction")
+        extract_synthetic_library()
+        for spec in registry.FORMS:
+            if spec.kind == "endorsement" and (settings.raw_dir / spec.filename).exists():
+                extract_registry_endorsement(spec)
+    if force or not any(settings.resolved_dir.glob("SYN-*.json")):
+        rprint("[bold]5/6[/] resolve"); resolve_all()
+    rprint("[bold]6/6[/] warm models")
+    from as_endorsed.retrieval.embed import make_embedder
+    from as_endorsed.retrieval.rerank import make_reranker
+
+    if settings.embedder != "hash":
+        make_embedder(settings.embedder).embed_passages(["warm"])
+    if settings.reranker != "none":
+        make_reranker(settings.reranker).score("warm", ["warm"])
+    rprint("[green]✓[/] ready: uvicorn as_endorsed.api:app --port 8000")
+
+
 if __name__ == "__main__":
     app()
