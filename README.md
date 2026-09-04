@@ -241,6 +241,79 @@ pytest                                             # 45 tests
 
 To use a hosted model for the prose, set `ANTHROPIC_API_KEY`. Without it the extractive generator answers and says so. [`deploy/README.md`](deploy/README.md) covers deployment.
 
+## Build log
+
+Five milestones, then the consequences: deployment, a security review, and correcting claims of my own that had gone stale. Written up because how a thing was built, and what went wrong while building it, says more than a feature list.
+
+About 5,800 lines of Python across 41 modules and 45 tests, with no machine-learning framework and no orchestration library.
+
+### Stack, and why each piece
+
+| Layer | Choice | Why |
+|---|---|---|
+| PDF reading | PyMuPDF | Text with per-line coordinates, which the clause highlighting depends on |
+| Data model | Pydantic, pydantic-settings | Typed records and environment-driven config |
+| Embeddings, reranking | fastembed on ONNX Runtime | bge-small for vectors, a MiniLM cross-encoder for reranking, both in-process |
+| Keyword search | rank_bm25, numpy | BM25 beside dense cosine, fused with reciprocal rank fusion |
+| Serving | FastAPI, uvicorn | The API is the product; the page is a thin client of it |
+| Interface | Plain HTML, CSS, JavaScript, pdf.js | No build step, ships in the same container |
+| Command line | Typer, Rich | Every pipeline stage runnable and inspectable on its own |
+| Synthetic documents | ReportLab | Generated declarations go through the same parser as real forms |
+| Optional | anthropic, psycopg + pgvector | A hosted generator and a Postgres backend, neither required |
+
+Two choices did real work. **No LangChain**, because the orchestration is about fifty lines and hand-written retrieval is easier to defend in review. **ONNX rather than PyTorch**, forced by a machine running Python 3.14 where torch has no wheels, and better anyway: the whole evaluation runs with no API key and no GPU.
+
+### Sequence
+
+1. **Corpus and parser.** Public form registry and downloader, PDF to a clause tree with stable paths, deterministic synthetic accounts, ground-truth questions.
+2. **Endorsement engine.** Extract amendment instructions from prose, resolve their targets against the clause tree, apply them in precedence order, hold what cannot be placed.
+3. **Retrieval ladder.** Five chunk variants, a declarations router, hybrid search, reranking, and the harness that compares them.
+4. **Generation.** Claim-level citations, groundedness and numeric checks, abstention, one bounded retry.
+5. **Ship.** API, client with PDF highlighting, container, continuous build, deployment.
+
+Everything after that was consequence: deployment fixes, a security review, and correcting claims that had gone stale.
+
+### Parsing real forms
+
+Two-column pages with centred headings were read in the wrong order, so clauses interleaved. Fixed by splitting each page into bands at full-width lines. Numbers inside running text opened false clauses, fixed by accepting a label only when it is the expected next one at its level. Soft hyphens split words across line breaks. A clause wrapping from one column to the next produced a bounding box spanning the whole page, so highlights covered unrelated text; there is now one box per column run.
+
+Then the Texas policy arrived with an entirely different convention: word headings instead of Roman numerals, and definitions written as quoted paragraphs rather than numbered items. Supporting both is the difference between a parser and a one-form script.
+
+### Domain logic
+
+Real endorsements append the next instruction to the end of restated text, so scanning clause by clause missed most of them. Rewritten to scan sentence by sentence. One published endorsement is a scan with no text layer; it is held for review with that reason rather than silently skipped.
+
+### Sources
+
+Citizens Florida keeps its forms behind an agent login, so it was dropped as a source. FEMA's edge blocks non-browser downloads, so the public-domain forms ship in `corpus/fema/`. The Texas association rejects the default Python user agent, so the downloader tries several in turn.
+
+### Retrieval quality
+
+The first evaluation looked poor until the questions turned out to embed the policy number and the as-of date. Those are filters, not search terms, and are now stripped before searching. The ground truth had a bug too: when two endorsements amend the same clause, the answer before the later one is the earlier amendment, not the printed form.
+
+### Deployment
+
+Hugging Face made Docker Spaces paid mid-task. Azure blocked its own cloud image build on a student subscription, so the image is built by GitHub Actions and pulled from there. Docker Desktop failed locally with a read-only store. Git Bash rewrote `/data` in command arguments into a Windows path, which crashed startup until `MSYS_NO_PATHCONV` was set.
+
+The worst was a real bug. The image never pre-computed the search index, so every container start re-embedded all 20,102 clauses and a cold request took **145 seconds**. The index is now built into the image and the application starts in about two seconds.
+
+### Security review
+
+Two genuine findings. An open endpoint allocated and cached an index per distinct as-of date with no limit, which is a memory-exhaustion lever. And a file path was assembled from request input; traversal did not actually work, but it was safe by accident rather than by design. Both fixed, plus a per-client rate limit, a strict content security policy, and documented limits. Details in [Security posture](#security-posture).
+
+### Evaluation integrity
+
+Most of the corrections landed here, and they are the ones worth reading.
+
+- The headline **89% is a retrieval measure**, and a qualifier slipped out of one table row so it read as end-to-end accuracy. The results are now split into two labelled tables.
+- A latency figure of **620 ms** stayed in this README after query caching was removed. Three runs since measure about 1.4 seconds. Corrected, with the reason it went wrong recorded next to it.
+- The perfect money score **does not demonstrate the numeric guard**, because on the no-model path the guard has nothing to catch. Those two claims are now stated separately, each with its own evidence.
+- Results files now **stamp themselves** with the commit and time that produced them. That does not stop a number going stale; it stops one lying about its age.
+
+### Still open
+
+Generated prose quality is unmeasured, because no hosted model has been run against the evaluation set. Optical character recognition is not implemented, which is why one real endorsement sits in the review queue. The Postgres backend exists with the same interface as the in-memory index but has not been exercised against a real database.
+
 ## Security posture
 
 The demo serves synthetic accounts, so there is nothing to steal, but the surface is treated as though there were.
