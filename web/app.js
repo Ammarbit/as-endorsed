@@ -173,8 +173,24 @@ async function loadEval() {
 }
 
 // ---------------------------------------------------------------- boot
+// The demo scales to zero when nobody is using it, so the first request may arrive
+// while the server is still starting. Retry quietly and say so.
+async function waitForServer(timeoutMs = 120000) {
+  const started = Date.now();
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await api("/api/health");
+    } catch (e) {
+      if (Date.now() - started > timeoutMs) throw e;
+      const secs = Math.round((Date.now() - started) / 1000);
+      $("health").textContent = `starting the demo… ${secs}s`;
+      await new Promise((r) => setTimeout(r, Math.min(3000, 500 * (attempt + 1))));
+    }
+  }
+}
+
 (async () => {
-  const h = await api("/api/health");
+  const h = await waitForServer();
   $("health").textContent = `${h.accounts} accounts · ${h.chunks.toLocaleString()} chunks · ${h.embedder} · rerank ${h.reranker}`;
   $("generator").innerHTML = h.generators.map((g) => `<option value="${g}">${g}</option>`).join("");
   if (h.generators.includes("claude")) $("generator").value = "claude";
@@ -190,4 +206,4 @@ async function loadEval() {
     await selectAccount(params.get("account"));
   }
   if (params.get("q")) { $("question").value = params.get("q"); await ask(); }
-})().catch((e) => { $("health").textContent = `error: ${e.message}`; });
+})().catch((e) => { $("health").textContent = `could not reach the server: ${e.message}`; });

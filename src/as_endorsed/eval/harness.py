@@ -92,7 +92,13 @@ class Corpus:
         return {a.account_id: a for a in self.accounts}
 
 
-def load_corpus(limit_accounts: int | None = None) -> Corpus:
+def load_corpus(limit_accounts: int | None = None, *, parse_endorsements: bool = True) -> Corpus:
+    """Load everything an index or an eval run needs.
+
+    `parse_endorsements=False` skips re-parsing the endorsement PDFs, which only the
+    window and clause chunk variants need; the as-endorsed variants read the already
+    resolved policies instead.
+    """
     base = load_parsed("NFIP-DWELLING@2021-10")
     accounts = load_accounts()
     if limit_accounts:
@@ -103,7 +109,7 @@ def load_corpus(limit_accounts: int | None = None) -> Corpus:
         p = settings.resolved_dir / f"{a.account_id}.json"
         resolved[a.account_id] = ResolvedPolicy.model_validate_json(p.read_text(encoding="utf-8")) if p.exists() else resolve_account(a, base)
     end_forms = {}
-    for spec in LIBRARY:
+    for spec in LIBRARY if parse_endorsements else []:
         pdf = settings.synthetic_dir / "endorsements" / f"{spec.form_id}.pdf"
         if pdf.exists():
             end_forms[spec.key] = parse_endorsement(pdf, form_id=spec.form_id, edition=SYN_EDITION, title=spec.title)

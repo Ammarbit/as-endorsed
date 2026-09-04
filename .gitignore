@@ -25,3 +25,5 @@ data/eval/*
 data/cache/
 data/*.log
 !data/eval/.gitkeep
+data/index/*
+!data/index/.gitkeep

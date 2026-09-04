@@ -42,6 +42,7 @@ from as_endorsed.generate.schema import Answer
 from as_endorsed.retrieval.embed import make_embedder
 from as_endorsed.retrieval.index import MemoryIndex, SearchConfig
 from as_endorsed.retrieval.rerank import make_reranker
+from as_endorsed.retrieval.store import load_index as load_saved_index
 from as_endorsed.retrieval.router import route
 from as_endorsed.synth.endorsements import EDITION as SYN_EDITION, LIBRARY
 
@@ -92,13 +93,17 @@ state = State()
 
 
 def _load() -> None:
-    state.corpus = load_corpus()
+    state.corpus = load_corpus(parse_endorsements=False)
     state.embedder = make_embedder(os.environ.get("AS_ENDORSED_EMBEDDER", settings.embedder))
     rr = os.environ.get("AS_ENDORSED_RERANKER", settings.reranker)
     state.reranker = make_reranker(rr) if rr != "none" else None
-    state.index = build_index(state.corpus, "header", state.embedder)
-    if hasattr(state.embedder, "flush"):
-        state.embedder.flush()
+    # Prefer the index built at image-build time: embedding the corpus here would add
+    # minutes to every cold start.
+    state.index = load_saved_index("header", state.embedder.name)
+    if state.index is None:
+        state.index = build_index(state.corpus, "header", state.embedder)
+        if hasattr(state.embedder, "flush"):
+            state.embedder.flush()
     state.generators = {"extractive": ExtractiveGenerator()}
     try:
         from as_endorsed.generate.llm import ClaudeGenerator, claude_available

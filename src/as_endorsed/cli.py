@@ -153,14 +153,21 @@ def bootstrap(force: bool = typer.Option(False, help="Regenerate even if outputs
                 extract_registry_endorsement(spec)
     if force or not any(settings.resolved_dir.glob("SYN-*.json")):
         rprint("[bold]5/6[/] resolve"); resolve_all()
-    rprint("[bold]6/6[/] warm models")
+    rprint("[bold]6/6[/] build the search index (so a cold start does not have to)")
+    from as_endorsed.eval.harness import build_index, load_corpus
     from as_endorsed.retrieval.embed import make_embedder
     from as_endorsed.retrieval.rerank import make_reranker
+    from as_endorsed.retrieval.store import load_index, save_index
 
-    if settings.embedder != "hash":
-        make_embedder(settings.embedder).embed_passages(["warm"])
+    embedder = make_embedder(settings.embedder)
     if settings.reranker != "none":
-        make_reranker(settings.reranker).score("warm", ["warm"])
+        make_reranker(settings.reranker).score("warm", ["warm"])  # pull the reranker weights too
+    if force or load_index("header", embedder.name) is None:
+        index = build_index(load_corpus(parse_endorsements=False), "header", embedder)
+        if hasattr(embedder, "flush"):
+            embedder.flush()
+        path = save_index(index, embedder.name)
+        rprint(f"   {len(index.chunks):,} chunks → {path}")
     rprint("[green]✓[/] ready: uvicorn as_endorsed.api:app --port 8000")
 
 
