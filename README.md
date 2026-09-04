@@ -232,7 +232,7 @@ data/                  raw, parsed, synthetic (gitignored; regenerate with the C
 
 ## Licensing
 
-Only public-domain or openly published forms are in the registry. FEMA's Standard Flood Insurance Policy forms are US Government works. The Texas Windstorm Insurance Association publishes its dwelling policy and endorsements openly on twia.org; they are downloaded by script and not committed. Forms owned by Insurance Services Office (ISO) are copyrighted and are never committed to this repository. Citizens Florida keeps its forms behind an agent login and is therefore not a corpus source.
+Only public-domain or openly published forms are in the registry. FEMA's Standard Flood Insurance Policy forms are US Government works and a copy ships in `corpus/fema/`, because fema.gov's edge intermittently blocks non-browser downloads. The Texas Windstorm Insurance Association publishes its dwelling policy and endorsements openly on twia.org; they are downloaded by script and not committed. Forms owned by Insurance Services Office (ISO) are copyrighted and are never committed to this repository. Citizens Florida keeps its forms behind an agent login and is therefore not a corpus source.
 
 ## Roadmap
 

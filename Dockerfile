@@ -19,6 +19,7 @@ WORKDIR /app
 COPY --chown=app:app pyproject.toml README.md ./
 COPY --chown=app:app src ./src
 COPY --chown=app:app web ./web
+COPY --chown=app:app corpus ./corpus
 RUN pip install --upgrade pip && pip install -e ".[llm]"
 
 USER app

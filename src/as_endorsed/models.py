@@ -32,6 +32,7 @@ class FormSpec(BaseModel):
     license: str
     parse_supported: bool = True
     base_form_id: str | None = Field(default=None, description="For endorsements: the form they amend")
+    bundled: str | None = Field(default=None, description="Repo-relative path of a copy shipped with the source (public-domain forms only)")
     note: str | None = None
 
     @property

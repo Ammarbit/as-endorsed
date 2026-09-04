@@ -7,10 +7,13 @@ never enter the repository; see README § Licensing.
 from __future__ import annotations
 
 import hashlib
+import shutil
+import time
 from pathlib import Path
 
 import httpx
 
+from as_endorsed.config import REPO_ROOT
 from as_endorsed.models import FormSpec
 
 FORMS: list[FormSpec] = [
@@ -23,6 +26,7 @@ FORMS: list[FormSpec] = [
         url="https://www.fema.gov/sites/default/files/documents/fema_F-122-Dwelling-SFIP_2021.pdf",
         filename="nfip/F-122_Dwelling_2021.pdf",
         license="US Government work, public domain (44 CFR 61 App. A(1))",
+        bundled="corpus/fema/F-122_Dwelling_2021.pdf",
     ),
     FormSpec(
         form_id="NFIP-GENERAL-PROPERTY",
@@ -33,6 +37,7 @@ FORMS: list[FormSpec] = [
         url="https://www.fema.gov/sites/default/files/documents/fema_F-123-general-property-SFIP_2021.pdf",
         filename="nfip/F-123_GeneralProperty_2021.pdf",
         license="US Government work, public domain (44 CFR 61 App. A(2))",
+        bundled="corpus/fema/F-123_GeneralProperty_2021.pdf",
     ),
     FormSpec(
         form_id="NFIP-SFIP-BUNDLE",
@@ -43,6 +48,7 @@ FORMS: list[FormSpec] = [
         url="https://www.fema.gov/pdf/nfip/manual201205/content/15_policy.pdf",
         filename="nfip/SFIP_AllForms_2011.pdf",
         license="US Government work, public domain",
+        bundled="corpus/fema/SFIP_AllForms_2011.pdf",
         parse_supported=False,
         note="Bundle of three forms with word-per-line text extraction. Needs a splitter and "
         "line re-flow before the clause parser can run. Kept for cross-edition eval questions.",
@@ -110,13 +116,41 @@ def sha256(path: Path) -> str:
 
 
 def download(spec: FormSpec, raw_dir: Path, *, force: bool = False) -> Path:
+    """Copy the bundled public-domain file when the source ships one; otherwise fetch it.
+
+    fema.gov sits behind an edge that blocks non-browser TLS fingerprints intermittently,
+    so the FEMA forms (US Government works) travel with the repository.
+    """
     dest = raw_dir / spec.filename
     dest.parent.mkdir(parents=True, exist_ok=True)
     if dest.exists() and not force:
         return dest
-    with httpx.stream("GET", spec.url, follow_redirects=True, timeout=60) as resp:
-        resp.raise_for_status()
-        with dest.open("wb") as fh:
-            for chunk in resp.iter_bytes():
-                fh.write(chunk)
-    return dest
+    if spec.bundled:
+        src = REPO_ROOT / spec.bundled
+        if src.exists():
+            shutil.copyfile(src, dest)
+            return dest
+    # Public hosts disagree about user agents: fema.gov's edge accepts a plain bot agent but
+    # rejects browser-like ones without a full browser fingerprint, and twia.org's CDN
+    # rejects the default python-httpx agent. Try an honest agent first, then fall back.
+    agents = [
+        "as-endorsed/0.1 (+https://github.com/Ammarbit/as-endorsed)",
+        "curl/8.7.1",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+    ]
+    last_error: Exception | None = None
+    for attempt, agent in enumerate(agents):
+        headers = {"User-Agent": agent, "Accept": "application/pdf,*/*;q=0.8"}
+        try:
+            with httpx.stream("GET", spec.url, headers=headers, follow_redirects=True, timeout=90) as resp:
+                resp.raise_for_status()
+                tmp = dest.with_suffix(".part")
+                with tmp.open("wb") as fh:
+                    for chunk in resp.iter_bytes():
+                        fh.write(chunk)
+                tmp.replace(dest)
+            return dest
+        except httpx.HTTPError as e:
+            last_error = e
+            time.sleep(1 + attempt)
+    raise RuntimeError(f"could not download {spec.key} from {spec.url}: {last_error}")
