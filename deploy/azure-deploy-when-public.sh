@@ -2,6 +2,7 @@
 # Wait until ghcr.io/ammarbit/as-endorsed:latest is publicly pullable, then create (or update)
 # the Azure Container App from it. Safe to re-run.
 set -u
+export MSYS_NO_PATHCONV=1   # Git Bash on Windows would otherwise rewrite /data into C:/Program Files/Git/data
 IMAGE_PATH="ammarbit/as-endorsed"
 IMAGE="ghcr.io/$IMAGE_PATH:latest"
 RG="as-endorsed-rg"; APP="as-endorsed"; ENV="as-endorsed-env"; LOC="germanywestcentral"
