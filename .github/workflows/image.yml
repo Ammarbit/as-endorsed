@@ -1,0 +1,50 @@
+# Build the image on every push to main and publish it to GitHub Container Registry.
+# The build runs `as-endorsed bootstrap` inside the image, so a green run also proves the
+# whole pipeline (download, parse, synthesize, extract, resolve) still works end to end.
+name: image
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: as-endorsed corpus download
+      - run: as-endorsed parse --all
+      - run: as-endorsed synth accounts -n 8
+      - run: as-endorsed endorse synthetic
+      - run: as-endorsed resolve
+      - run: pytest -q
+        env:
+          AS_ENDORSED_EMBEDDER: hash
+          AS_ENDORSED_RERANKER: none
+
+  image:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
