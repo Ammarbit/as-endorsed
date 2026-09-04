@@ -6,7 +6,6 @@ __pycache__
 data
 docs
 tests
-.claude
 .env
 node_modules
 *.log
