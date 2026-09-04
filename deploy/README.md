@@ -28,4 +28,4 @@ fly deploy
 
 ## Any container host (Railway, Render, Azure Container Apps, Cloud Run)
 
-Point it at the published image `ghcr.io/<owner>/as-endorsed:latest` (built by `.github/workflows/image.yml` on every push to `main`), expose port 8000 (or set `PORT`), give it 2 GB of memory. No volume is required.
+Point it at the published image `ghcr.io/ammarbit/as-endorsed:latest` (built by `.github/workflows/image.yml` on every push to `main`), expose port 8000 (or set `PORT`), give it 2 GB of memory. No volume is required.
