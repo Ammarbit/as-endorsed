@@ -69,6 +69,9 @@ textarea { resize: vertical; }
 .clause-versions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
 .ver { border: 1px solid var(--rule); border-radius: 2px; padding: 8px 10px; font-size: 13px; }
 .ver h4 { margin: 0 0 4px; font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.ver.full { grid-column: 1 / -1; }
+.muted { color: var(--muted); }
+.warn { color: var(--amber); }
 .ver.current h4 { color: var(--red); }
 .ver.deleted { text-decoration: line-through; color: var(--muted); }
 

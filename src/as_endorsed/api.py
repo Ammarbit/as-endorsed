@@ -18,12 +18,15 @@ Everything is loaded once at startup; as-of views are resolved and indexed on de
 from __future__ import annotations
 
 import os
+import time
+from collections import OrderedDict
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from pathlib import Path
+from threading import Lock
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -44,6 +47,37 @@ from as_endorsed.synth.endorsements import EDITION as SYN_EDITION, LIBRARY
 
 WEB_DIR = Path(__file__).resolve().parents[2] / "web"
 BASE_KEY = "NFIP-DWELLING@2021-10"
+
+# An as-of view is resolved and embedded on demand, so the cache is bounded: an open
+# endpoint that allocates per distinct input is a memory-exhaustion lever otherwise.
+MAX_AS_OF_CACHE = 32
+ASK_RATE_LIMIT, ASK_RATE_WINDOW = 30, 60.0  # requests per client per minute on the expensive path
+MAX_RATE_KEYS = 4096
+
+CSP = (
+    "default-src 'self'; "
+    "script-src 'self' https://cdnjs.cloudflare.com; "
+    "worker-src 'self' blob: https://cdnjs.cloudflare.com; "
+    "style-src 'self' https://fonts.googleapis.com; "
+    "font-src https://fonts.gstatic.com; "
+    "img-src 'self' data: blob:; "
+    "connect-src 'self' https://cdnjs.cloudflare.com; "
+    "object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+)
+
+_rate: dict[str, list[float]] = {}
+_rate_lock = Lock()
+
+
+def _rate_limited(key: str) -> bool:
+    now = time.monotonic()
+    with _rate_lock:
+        if len(_rate) > MAX_RATE_KEYS:
+            _rate.clear()
+        hits = [t for t in _rate.get(key, ()) if now - t < ASK_RATE_WINDOW]
+        hits.append(now)
+        _rate[key] = hits
+        return len(hits) > ASK_RATE_LIMIT
 
 class State:
     corpus: Corpus
@@ -73,7 +107,7 @@ def _load() -> None:
             state.generators["claude"] = ClaudeGenerator()
     except Exception:  # noqa: BLE001
         pass
-    state.as_of_cache = {}
+    state.as_of_cache = OrderedDict()
 
 
 @asynccontextmanager
@@ -83,6 +117,19 @@ async def _lifespan(_: FastAPI):
 
 
 app = FastAPI(title="As-Endorsed", version=__version__, docs_url="/api/docs", openapi_url="/api/openapi.json", lifespan=_lifespan)
+
+
+@app.middleware("http")
+async def _security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    # The generated API docs load their own bundle and inline scripts; the app's own
+    # pages get the strict policy.
+    if not request.url.path.startswith(("/api/docs", "/api/openapi.json")):
+        response.headers.setdefault("Content-Security-Policy", CSP)
+    return response
 
 
 # ----------------------------------------------------------------------------
@@ -138,8 +185,15 @@ def _acct(account_id: str):
 
 
 def _pdf_path(form_key: str) -> Path:
-    if form_key.startswith("SYN-END-"):
-        p = settings.synthetic_dir / "endorsements" / f"{form_key.split('@')[0]}.pdf"
+    """Resolve a form key to a file through an allowlist.
+
+    The key is never used to build a path directly: only keys that exist in the
+    synthetic library or the corpus registry resolve, so no input can walk the
+    filesystem.
+    """
+    synthetic = {spec.key: spec.form_id for spec in LIBRARY}
+    if form_key in synthetic:
+        p = settings.synthetic_dir / "endorsements" / f"{synthetic[form_key]}.pdf"
     else:
         try:
             p = settings.raw_dir / registry.get(form_key).filename
@@ -273,9 +327,12 @@ def clause(form_key: str, path: str, account_id: str | None = None) -> dict:
 
 
 @app.post("/api/ask", response_model=AskResponse)
-def ask(req: AskRequest) -> AskResponse:
+def ask(req: AskRequest, request: Request) -> AskResponse:
     from as_endorsed.retrieval.router import retrieval_query
 
+    client = request.client.host if request.client else "unknown"
+    if _rate_limited(client):
+        raise HTTPException(429, f"more than {ASK_RATE_LIMIT} questions a minute; try again shortly")
     a = _acct(req.account_id)
     name = req.generator or ("claude" if "claude" in state.generators else "extractive")
     gen = state.generators.get(name)
@@ -284,9 +341,17 @@ def ask(req: AskRequest) -> AskResponse:
     when = req.as_of or route(req.question).as_of
     index = state.index
     if when:
+        # An as-of date outside the policy term has no meaning, and accepting arbitrary
+        # dates would let a caller allocate an index per request.
+        p = a.policy
+        if not (p.term_start <= when <= p.term_end):
+            raise HTTPException(422, f"as_of must fall in the policy term, {p.term_start.isoformat()} to {p.term_end.isoformat()}")
         key = (a.account_id, when.isoformat())
         if key not in state.as_of_cache:
             state.as_of_cache[key] = _as_of_index(state.corpus, a, "header", when, state.embedder)
+            while len(state.as_of_cache) > MAX_AS_OF_CACHE:
+                state.as_of_cache.popitem(last=False)
+        state.as_of_cache.move_to_end(key)
         index = state.as_of_cache[key]
     res = Resources(index=index, embedder=state.embedder, reranker=state.reranker, base=state.corpus.base)
     cfg = GenConfig(search=SearchConfig(mode="hybrid", rerank=state.reranker is not None, k=5, pull_definitions=True), loop=req.loop)

@@ -232,6 +232,20 @@ tests/                   parser and engine tests run against the real forms
 data/                  raw, parsed, synthetic (gitignored; regenerate with the CLI)
 ```
 
+## Security posture
+
+The public demo serves synthetic accounts, so there is nothing to steal, but the surface is treated as if there were.
+
+- **No personal data.** Every account, name, address and declarations page is generated from a seed. The only real documents are public government and association forms.
+- **Account scoping is enforced in retrieval,** not in the prompt: every search hard-filters to one account before ranking, so one policy's clauses cannot surface under another.
+- **File access goes through an allowlist.** A form key resolves against the registry or the synthetic library; no request builds a filesystem path, so no input can walk the tree.
+- **Bounded work per request.** Questions are length-capped, an as-of date must fall inside the policy term, the on-demand as-of indexes are an LRU with a fixed cap, and the expensive endpoint is rate-limited per client. Platform scaling is capped at one replica, so a flood cannot run up a bill.
+- **Browser hardening.** A strict content security policy (no inline scripts or styles, an explicit allowlist for the PDF renderer and fonts), `nosniff`, `frame-ancestors 'none'` and `no-referrer`. All rendered values are escaped; nothing a visitor types reaches the page as markup.
+- **Container.** Runs as a non-root user, contains no credentials, and needs no network at runtime. The optional model API key is injected as a platform secret, never baked in.
+- **Dependencies** are audited with `pip-audit`; no known vulnerabilities at the time of writing.
+
+There is deliberately no authentication: it is a public demo of a retrieval system. Serving real policies would need authentication, per-tenant isolation at the storage layer, and an audit log of who asked what, none of which this repository implements.
+
 ## Licensing
 
 Only public-domain or openly published forms are in the registry. FEMA's Standard Flood Insurance Policy forms are US Government works and a copy ships in `corpus/fema/`, because fema.gov's edge intermittently blocks non-browser downloads. The Texas Windstorm Insurance Association publishes its dwelling policy and endorsements openly on twia.org; they are downloaded by script and not committed. Forms owned by Insurance Services Office (ISO) are copyrighted and are never committed to this repository. Citizens Florida keeps its forms behind an agent login and is therefore not a corpus source.

@@ -87,7 +87,7 @@ async function showCitation(c, btn) {
     const changed = c.text_as_endorsed && c.original_text && c.text_as_endorsed !== c.original_text;
     $("clause-versions").innerHTML = changed || c.active === false
       ? `<div class="ver"><h4>Printed form</h4>${esc(c.original_text)}</div><div class="ver current ${c.active === false ? "deleted" : ""}"><h4>${c.active === false ? "Deleted by endorsement" : "As endorsed"}</h4>${esc(cur)}</div>`
-      : `<div class="ver" style="grid-column: 1 / -1"><h4>Clause text</h4>${esc(cur)}</div>`;
+      : `<div class="ver full"><h4>Clause text</h4>${esc(cur)}</div>`;
   } else panel.classList.add("hidden");
 }
 
@@ -145,10 +145,10 @@ function renderChanges() {
   if (!rows.length) { $("changes").innerHTML = `<div class="pane-intro">No endorsements change this policy's clauses.</div>`; return; }
   $("changes").innerHTML = `<table class="changes"><thead><tr><th>Clause</th><th>Change</th><th>Printed form</th><th>As endorsed</th></tr></thead><tbody>` +
     rows.map((r) => {
-      const ops = r.lineage.map((l) => `<span class="op ${l.op}">${l.op}</span> <span class="mono">${esc(l.endorsement)}</span><br><span class="mono" style="color:var(--muted)">${l.effective_date || ""}</span>`).join("<br>");
+      const ops = r.lineage.map((l) => `<span class="op ${esc(l.op)}">${esc(l.op)}</span> <span class="mono">${esc(l.endorsement)}</span><br><span class="mono muted">${esc(l.effective_date || "")}</span>`).join("<br>");
       const cur = r.active ? esc(r.text_as_endorsed) : `<del>${esc(r.text_as_endorsed)}</del>`;
-      const flags = r.flags.length ? `<div class="mono" style="color:var(--amber)">${esc(r.flags.join("; "))}</div>` : "";
-      return `<tr><td class="mono">${esc(r.path)}<br><span style="color:var(--muted)">${esc(r.heading || "")}</span></td><td>${ops}</td><td>${esc(r.original_text || "—")}</td><td>${cur}${flags}</td></tr>`;
+      const flags = r.flags.length ? `<div class="mono warn">${esc(r.flags.join("; "))}</div>` : "";
+      return `<tr><td class="mono">${esc(r.path)}<br><span class="muted">${esc(r.heading || "")}</span></td><td>${ops}</td><td>${esc(r.original_text || "—")}</td><td>${cur}${flags}</td></tr>`;
     }).join("") + `</tbody></table>`;
 }
 
