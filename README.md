@@ -36,7 +36,9 @@ The other tabs show every clause the account's endorsements changed, the queue o
 
 Forty synthetic accounts built on real public forms, 636 questions with known correct answers, measured on an ordinary CPU. The live demo runs this exact configuration: no hosted model, no API key, so what you can click is what was measured.
 
-Every table below is produced by `as-endorsed eval run` and `as-endorsed eval generate`, and the output files record the commit and the time they were measured, so a number here can always be traced to the code that produced it. These were measured on 2026-09-04 at commit `8c32eb1`, and reproduced identically across three consecutive runs.
+Every table below is produced by `as-endorsed eval run` and `as-endorsed eval generate`, and the output files record the commit and the time they were measured. That does not stop a number from going stale; it stops one from lying about its age. Catching a stale number still means re-running and comparing.
+
+These were measured on 2026-09-04 at commit `8c32eb1`. Re-running after later code changes produced identical figures, which confirms those changes did not touch retrieval. The pipeline is deterministic, so that is a check that nothing drifted rather than evidence of robustness.
 
 The two kinds of measurement are kept apart on purpose, because they answer different questions.
 
@@ -61,7 +63,9 @@ Row two against row one is the whole argument. Same search engine, same reranker
 | Long-form answers, lexical similarity to the reference, n=199 | 62.3% |
 | First citation points at an expected clause | 64.6% |
 
-**What the money result does and does not prove.** The extractive generator returns the cited clause verbatim, so any amount it reports came from that clause by construction. The figure shows the pipeline does not corrupt a number in transit. It does **not** demonstrate that the numeric guard works, because on this path the guard has nothing to catch. The guard is demonstrated separately, by a test that feeds the hosted-generator path a fabricated $9,999 through a stub client and asserts the answer is withheld. Two claims, two separate pieces of evidence, deliberately not merged.
+**What the money result does and does not prove.** The extractive generator returns the cited clause verbatim, so any amount it reports came from that clause by construction. The figure shows the pipeline does not corrupt a number in transit. It does **not** demonstrate that the numeric guard works, because on this path the guard has nothing to catch.
+
+The guard is evidenced separately and narrowly. Two scenarios are unit-tested against a stub client on the hosted-generator path: a fabricated $9,999 that does not appear in the cited clause, and a claim the cited clause does not support. Both are withheld. That is a correct test of the guard logic and it is the whole of the evidence. **The system has not been red-teamed,** and two hand-picked hallucination patterns are not a coverage claim.
 
 Separately, the amendment engine resolved 17 of 20 instructions across 11 real published endorsements, holding the other 3 for review with a stated reason rather than guessing.
 
