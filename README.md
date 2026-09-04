@@ -32,9 +32,55 @@ Open the [live demo](https://as-endorsed.wittybay-fdf1bbec.germanywestcentral.az
 
 The other tabs show every clause the account's endorsements changed, the queue of endorsement instructions the system refused to apply on its own with the reason for each, and the full evaluation tables.
 
+## The data it was tested on
+
+The single most important thing to understand before reading the results.
+
+### Real documents
+
+Every base policy form and every real endorsement is a public document, downloaded by script and parsed by the same code path.
+
+| Source | What | Role in the results |
+|---|---|---|
+| FEMA, NFIP Dwelling Form F-122 (Oct 2021) | 32 pages, 498 clauses | The base form behind all 40 accounts |
+| FEMA, NFIP General Property Form F-123 (Oct 2021) | 29 pages, 470 clauses | Second form, proves the parser is not tuned to one document |
+| TWIA Dwelling Policy (Aug 2023) | 17 pages, 255 clauses | A different numbering convention entirely |
+| 11 TWIA endorsements | Real published amendments | The amendment-extraction result: 17 of 20 instructions resolved, 3 held |
+
+### Synthetic documents, and why
+
+| | Count | Why it is synthetic |
+|---|---:|---|
+| Accounts, each with a declarations page rendered to PDF | 40 | Real declarations pages are customer records. Generating them from a seed gives exact ground truth and no personal data |
+| Endorsements attached to those accounts | 8 | No public corpus exists of real policies with their endorsement schedules attached, because that pairing is private customer data |
+| Mid-term change endorsements | 17 accounts | The real NFIP mechanism for changing a limit mid-term, which is what makes as-of questions meaningful |
+
+Thirty of the 40 accounts carry at least one endorsement, ranging from one to five.
+
+### The questions
+
+636 questions, all with answers known by construction rather than by annotation. They come from **37 templates** applied across the 40 accounts, not 636 independently written questions.
+
+| Category | Questions | Templates | How the answer is known |
+|---|---:|---:|---|
+| Declarations lookups and as-of | 447 | 22 | Read directly from the generated account record |
+| Endorsement-resolved | 189 | 15 | Written per endorsement with both answers: the one that applies when it is attached, and the one that applies when it is not |
+
+### What this establishes, and what it does not
+
+**The parser result is real.** It runs on genuine published forms with two different numbering conventions, and the warnings list is asserted empty in the test suite.
+
+**The amendment-extraction result is real.** 17 of 20 instructions resolved across 11 genuinely published TWIA endorsements, with the failures held and named rather than hidden.
+
+**The headline retrieval result, 52% against 89%, is measured on synthetic endorsements.** They are written in the industry's own idiom and were checked against the real TWIA wording, so the mechanism being tested is real. But the comparison itself has not been run against real policies with real endorsements attached, because that data is private. This is the honest limit of the number, and it is the first thing to say if someone asks what would make it stronger.
+
+**The question set is narrower than 636 suggests.** Thirty-seven templates across forty accounts tests whether the system handles the same question shapes over varying data. It does not test paraphrase robustness, adversarial phrasing, or the questions a real broker would actually type. A held-out set written by someone other than the author would be the natural next step.
+
+**Nothing is hand-annotated,** so no labelling error is possible, and equally nothing captures how a real user asks.
+
 ## Results
 
-Forty synthetic accounts built on real public forms, 636 questions with known correct answers, measured on an ordinary CPU. The live demo runs this exact configuration: no hosted model, no API key, so what you can click is what was measured.
+Forty synthetic accounts built on real public forms, 636 questions with known correct answers, measured on an ordinary CPU. The live demo runs this exact configuration: no hosted model, no API key, so what you can click is what was measured. Read [The data it was tested on](#the-data-it-was-tested-on) first: the retrieval comparison below runs on synthetic endorsements, and that is the honest limit of it.
 
 Every table below is produced by `as-endorsed eval run` and `as-endorsed eval generate`, and the output files record the commit and the time they were measured. That does not stop a number from going stale; it stops one from lying about its age. Catching a stale number still means re-running and comparing.
 
