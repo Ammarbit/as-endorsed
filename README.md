@@ -34,20 +34,55 @@ The other tabs show every clause the account's endorsements changed, the queue o
 
 ## Results
 
-Forty synthetic accounts built on real public forms, 636 questions with known correct answers, all measured on an ordinary CPU with no paid AI service.
+Forty synthetic accounts built on real public forms, 636 questions with known correct answers, measured on an ordinary CPU. The live demo runs this exact configuration: no hosted model, no API key, so what you can click is what was measured.
 
-| Measurement | Result |
+The two kinds of measurement are kept apart on purpose, because they answer different questions.
+
+### Retrieval: was the currently correct clause found?
+
+| Measurement, top 5 results | Result |
 |---|---:|
-| Questions about limits, deductibles and dates, exact match | **100%** |
-| Clause questions answered from a correct chunk, conventional approach | 52% |
-| Same questions, same retrieval, index holding the policy **as endorsed** | **89%** |
-| Questions about an amended clause, as-endorsed index | **100%** |
-| Amendment instructions resolved on 11 real published endorsements | 17 of 20, the other 3 held for review with a stated reason |
-| Money answers released by the checked generator | 100% exact; a fabricated amount is never released |
+| Clause questions where a retrieved chunk carried the currently correct text, conventional chunking | 52% |
+| Same questions, same search engine and reranker, index holding the policy **as endorsed** | **89%** |
+| Questions about a clause an endorsement had amended, as-endorsed index | **100%** |
 
-That third row against the second is the whole argument. Same search engine, same reranker, same questions. The only difference is that the index holds the policy as it currently reads.
+Row two against row one is the whole argument. Same search engine, same reranker, same questions. The only difference is that the index holds the policy as it currently reads.
 
-Full tables, the metric definitions, and the results that did **not** improve are in [How it works](#how-it-works) below. Nothing measured is hidden.
+**These are retrieval figures.** They say the right clause was put in front of the generator. They do not say the final answer was worded correctly, and "89% accurate" would be an overclaim.
+
+### End to end: was the answer right?
+
+| Measurement, full pipeline | Result |
+|---|---:|
+| Limits, deductibles, dates and identifiers, exact match, n=447 | **100%** |
+| Money and short-text answers through the checked generator, exact match, n=433 | **100%** |
+| Long-form answers, lexical similarity to the reference, n=199 | 62.3% |
+| First citation points at an expected clause | 64.6% |
+
+Separately, the amendment engine resolved 17 of 20 instructions across 11 real published endorsements, holding the other 3 for review with a stated reason rather than guessing.
+
+### What these numbers do not cover
+
+Worth saying before anyone asks.
+
+- **Every figure above came from the extractive generator,** which returns the cited clause verbatim instead of writing prose. The hosted-model generator is implemented and covered by tests against a stub client, but it has never been run against the evaluation set. The quality of generated prose is therefore unmeasured. Running `as-endorsed eval generate --generator claude --judge` with an API key fills that gap, and the results will be published here when it is.
+- **Long-form correctness is the weakest number here,** and 62.3% is a lexical proxy rather than a judgement of meaning. That is precisely the number a hosted model should improve, and precisely the claim I cannot yet make.
+- **Retrieval is measured far more rigorously than generation.** That is an honest description of where the engineering effort went.
+
+Full tables, the metric definitions, and the changes that did **not** improve anything are in [How it works](#how-it-works). Nothing measured is hidden.
+
+### Why the first request is slow
+
+The container scales to zero when nobody is using it. That is a deliberate cost decision: keeping one warm around the clock would cost roughly $33 to $72 a month, which a portfolio demo does not justify.
+
+What it causes, in order of how likely you are to notice:
+
+- The first request after an idle spell waits about **25 seconds** while the platform schedules and starts a container. The page shows a counter so it does not look broken.
+- Everything after that is immediate, and the container stays warm through about five minutes of inactivity.
+- There is a single replica by design, so two visitors arriving during a cold start both wait. That same cap is what makes the hosting bill bounded.
+- It used to be far worse. A build bug meant every container start re-embedded all 20,102 clauses, so a cold request took **145 seconds**. The search index is now built into the image, and the application starts in about two seconds. The remaining wait is platform scheduling, not this code.
+
+Removing the wait entirely means paying for an always-on instance. [`deploy/README.md`](deploy/README.md) has the commands.
 
 ## What this demonstrates
 
