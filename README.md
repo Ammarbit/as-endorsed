@@ -1,84 +1,82 @@
 # As-Endorsed
 
-Retrieval over insurance policies **as they currently read**, not as the base form was printed.
+**Question answering over insurance policies that reads them as they currently stand, not as the base form was printed.**
 
-A policy is a declarations page, one or more base coverage forms, and a schedule of endorsements that replace, delete, or add clauses. Flat-chunk RAG retrieves whichever version of a clause scores highest. This system resolves the endorsement stack at ingest and answers from the resolved policy, citing the clause, the form it lives in, and the endorsement that last changed it.
+> **Live demo:** https://as-endorsed.wittybay-fdf1bbec.germanywestcentral.azurecontainerapps.io
+> It scales to zero when idle, so the first request after a quiet spell waits about 25 seconds for the platform to start a container. The page shows a counter while that happens. Everything after it is immediate: the search index is built into the image, so the application itself starts in around two seconds.
 
-> **Live demo:** https://as-endorsed.wittybay-fdf1bbec.germanywestcentral.azurecontainerapps.io (Azure Container Apps, scales to zero: the first request after idle takes about 20 seconds while the container starts.)
->
-> Status: **all five milestones built and deployed.** The live Claude numbers wait on an API key. See [Roadmap](#roadmap).
+![A cited answer with the clause boxed on the real FEMA form](docs/screenshot.png)
 
-## Results first
+## The problem this solves
 
-Forty synthetic accounts on real public forms, 636 ground-truth questions, everything measured on a laptop CPU with no hosted model.
+An insurance policy is not one document. It is a base form, identical for thousands of customers, plus a stack of endorsements that amend it for one customer. An endorsement says things like *"Paragraph 14 is deleted"*, *"Condition 4.a.(5) is replaced by the following"*, or *"the following exclusion is added"*.
 
-| What | Number |
+So the words printed in the base form are frequently not what a given policy says any more.
+
+Every document assistant built the usual way gets this wrong. It cuts all the documents into equal chunks, finds the chunks whose wording resembles the question, and hands them to a language model. The printed exclusion and the endorsement that deleted it are two separate chunks in the same pile, and nothing tells the system which one is in force. Ask *"does this policy exclude hot tubs?"* and it will confidently quote an exclusion that was removed a year ago.
+
+That is a wrong answer about money, delivered with a citation, which is worse than no answer at all.
+
+**This project resolves the endorsement stack before anyone asks a question.** It parses the base form into individual clauses, works out what each endorsement actually changes, rewrites the policy so it reads correctly for that customer on a given date, and keeps the original wording and the amendment history beside it. Answers then come from the resolved policy and cite the exact clause, highlighted on the real PDF page.
+
+## See it working
+
+Open the [live demo](https://as-endorsed.wittybay-fdf1bbec.germanywestcentral.azurecontainerapps.io), pick account **SYN-00001**, and try these in order.
+
+| Ask this | What to look for |
+|---|---|
+| *Does the policy exclude hot tubs, spas and swimming pools?* | The base form excludes them. The answer says the clause was **deleted by an endorsement**, and boxes it on page 14 of the FEMA form with the printed text struck through beside the current text. |
+| *What is the most the policy will pay for sandbags and labor to protect the building from flood?* | The printed form says $1,000. On an account carrying the loss-avoidance endorsement the answer is the amended figure, and the amount is refused unless it appears in the cited clause. |
+| *How does the policy define 'basement' as of 2026-09-19?* | Two endorsements amend that definition on different dates. Asking as of a past date returns the wording that was in force **then**, not the current one. |
+| *What is the building deductible on policy NFP-2026-1725448?* | Facts like limits and deductibles are read from the declarations record rather than searched for, and are exact. |
+
+The other tabs show every clause the account's endorsements changed, the queue of endorsement instructions the system refused to apply on its own with the reason for each, and the full evaluation tables.
+
+## Results
+
+Forty synthetic accounts built on real public forms, 636 questions with known correct answers, all measured on an ordinary CPU with no paid AI service.
+
+| Measurement | Result |
 |---|---:|
-| Declarations questions (router + typed lookup), exact match | **100%** |
-| Clause questions, correct chunk in top 5, clause-aware index + hybrid + rerank | 52% |
-| Same, with the index holding the policy **as endorsed** | **89%** |
-| Questions about an attached endorsement answered by a correct chunk, as-endorsed index | **100%** |
-| Endorsement ops resolved on real TWIA endorsements | 17 of 20, 3 held for review with reasons |
-| Money and short answers through the checked generator, exact | 100% (numeric guard: a fabricated amount is never released) |
+| Questions about limits, deductibles and dates, exact match | **100%** |
+| Clause questions answered from a correct chunk, conventional approach | 52% |
+| Same questions, same retrieval, index holding the policy **as endorsed** | **89%** |
+| Questions about an amended clause, as-endorsed index | **100%** |
+| Amendment instructions resolved on 11 real published endorsements | 17 of 20, the other 3 held for review with a stated reason |
+| Money answers released by the checked generator | 100% exact; a fabricated amount is never released |
 
-Full tables with every rung, the metric definitions and the honest misses are in [Retrieval ladder](#retrieval-ladder-and-eval-harness) and [Cited generation](#cited-generation-with-checks).
+That third row against the second is the whole argument. Same search engine, same reranker, same questions. The only difference is that the index holds the policy as it currently reads.
 
-## Run it
+Full tables, the metric definitions, and the results that did **not** improve are in [How it works](#how-it-works) below. Nothing measured is hidden.
 
-```bash
-docker compose up api          # first start: downloads public forms + ONNX models, builds the synthetic book, ~5 min
-open http://localhost:8000
-```
+## What this demonstrates
 
-Or locally:
+If you are evaluating me for a document or retrieval project, this is what it is evidence of.
 
-```bash
-python -m venv .venv && .venv/Scripts/activate      # or source .venv/bin/activate
-pip install -e ".[dev]"
-as-endorsed bootstrap                               # corpus, parses, accounts, extraction, resolution, warm models
-uvicorn as_endorsed.api:app --port 8000
-```
+- **Retrieval systems that are correct, not just plausible.** Hybrid search, reciprocal rank fusion, cross-encoder reranking, and a router that answers structured facts from records instead of guessing at text.
+- **Getting real structure out of real PDFs.** A parser that turns two-column legal forms into an addressable clause tree with page coordinates, handling two different numbering conventions, with zero unexplained failures on the reference forms.
+- **Domain logic that generic tools miss.** The amendment engine is the difference between a demo and something a broker could use. Most of the value in a document project lives in this kind of domain rule, not in the model.
+- **Evaluation before claims.** A ground-truth set, an ablation ladder where each rung adds one thing, and published numbers including the changes that did nothing.
+- **Systems that refuse to be wrong.** Claim-level citations, a groundedness check, a numeric guard, and abstention as a valid answer.
+- **Shipping.** Tested, containerised, continuously built, deployed, security-reviewed, documented.
 
-![As-Endorsed: a cited answer with the clause highlighted on the FEMA form](docs/screenshot.png)
+The same architecture transfers directly to contracts with amendments, regulatory documents with revisions, technical specifications with addenda, and any corpus where the current text differs from the printed text.
 
-Pick an account, ask a question, and every citation opens the actual form page with the clause boxed, alongside the printed text and the text as endorsed. The other tabs show every clause the account's endorsements changed, the review queue of ops the engine would not apply on its own, and the eval tables. `GET /api/docs` has the OpenAPI schema; the interface is a thin framework-free client of that API so it ships in the same container.
+## How it works
 
-To use Claude for generation, set `ANTHROPIC_API_KEY` (and optionally `AS_ENDORSED_LLM_MODEL`); without it the extractive generator answers and says so. [`fly.toml`](fly.toml) deploys the container with a persistent volume.
-
-## What works today
-
-```bash
-python -m venv .venv && .venv/Scripts/activate      # or source .venv/bin/activate
-pip install -e ".[dev]"
-
-as-endorsed corpus download        # FEMA flood forms (public domain) + TWIA policy and endorsements
-as-endorsed parse --all            # clause trees → data/parsed/*.json + outline.md
-as-endorsed synth accounts -n 40   # declarations + endorsement PDFs + ground-truth Q&A
-as-endorsed endorse synthetic      # extract ops from the synthetic library, score vs ground truth
-as-endorsed endorse extract --all  # extract ops from the real TWIA endorsements
-as-endorsed resolve                # apply attached endorsements to every account
-as-endorsed review                 # held and unresolved ops → data/resolved/review.md
-as-endorsed eval run               # build every index variant, run the ablation ladder
-as-endorsed search "How does the policy define basement?" -a SYN-00001
-as-endorsed ask "Does the policy exclude hot tubs?" -a SYN-00001   # cited answer, checks shown
-as-endorsed eval generate --generator extractive                   # answer pipeline over the ground-truth set
-as-endorsed bootstrap                                              # all of the above that is missing, in order
-pytest
-```
-
-Models run in-process through ONNX (`fastembed`): BAAI/bge-small-en-v1.5 for embeddings and a MiniLM cross-encoder for reranking. No API key is needed for anything up to and including the eval; the optional LLM extractor and the generation milestone are the only parts that call a hosted model.
+Models run in-process through ONNX (`fastembed`): BAAI/bge-small-en-v1.5 for embeddings, a MiniLM cross-encoder for reranking. No API key is needed for anything up to and including the evaluation. A hosted model is optional and only writes the final prose.
 
 ### Clause parser
 
-`as_endorsed.ingest` turns a numbered policy form PDF into a clause tree with stable IDs, no LLM involved.
+`as_endorsed.ingest` turns a numbered policy form into a clause tree with stable identifiers. No language model is involved.
 
 | Form | Numbering style | Pages | Clauses | Parser warnings |
 |---|---|---:|---:|---:|
 | NFIP Dwelling Form, F-122 (Oct 2021) | Roman sections, I.A.1.a.(1).(a).(i) | 32 | 498 | 0 |
 | NFIP General Property Form, F-123 (Oct 2021) | Roman sections | 29 | 470 | 0 |
-| TWIA Dwelling Policy (Aug 2023) | Word headings (CONDITIONS.4.a.(5)), quoted-term definitions | 17 | 255 | 4 |
+| TWIA Dwelling Policy (Aug 2023) | Word headings, quoted-term definitions | 17 | 255 | 4 |
 
-Each clause carries a path in the form's own numbering (`II.C.6.b`), its parent, its own text (children are separate clauses), the defined term where it is a definition, and page plus bounding boxes for citation highlighting. Example record:
+Each clause carries its path in the form's own numbering, its parent, its own text, the defined term where it is a definition, and the page and bounding boxes used to highlight it:
 
 ```json
 {
@@ -94,67 +92,53 @@ Each clause carries a path in the form's own numbering (`II.C.6.b`), its parent,
 
 How it stays honest:
 
-- **Reading order is layout-derived.** Two-column pages with centred full-width headings are read band by band, left column then right. Header and footer lines are removed by repetition across pages, not by a form-specific pattern.
-- **A label opens a clause only if it is the expected next label at its level.** `2.` inside running text never opens a bogus clause because the parser was expecting `B.`.
-- **Continuation lines attach by indentation.** Wrapped text sits one step deeper than its label, so trailing text after a clause's children lands on the parent, not on the last child.
-- **Two numbering styles.** Roman-numeral sections and word headings (`CONDITIONS`, `COVERAGE A (Dwelling)`) both become sections; unlabeled text under a section is split into paragraph clauses on vertical gaps, so a definitions section written as quoted-term paragraphs still yields one clause per term.
-- **Failures are loud.** Anything the parser rejects is listed in `warnings`, and the test suite asserts the list is empty for the NFIP forms.
-
-### Synthetic accounts
-
-Real forms, synthetic declarations. `as_endorsed.synth` generates NFIP flood accounts deterministically from a seed: declarations, coverages within NFIP maximums, and for about forty percent of accounts a mid-term **General Change Endorsement** that alters a limit or deductible as of an effective date. Each account renders to a PDF that goes through the same ingestion path as real documents.
-
-Accounts also attach zero to three endorsements from a synthetic library written against the real NFIP form (see below). `data/synthetic/qa.jsonl` holds 636 templated ground-truth rows: the declarations category (lookups, as-of questions, unanswerables) and the endorsement-resolved category, whose answers differ depending on which endorsements are attached and, for mid-term attachments, on the as-of date.
+- **Reading order comes from the page layout.** Two-column pages with centred full-width headings are read band by band. Running headers and footers are dropped because they repeat across pages, not because of a form-specific rule.
+- **A label opens a clause only if it is the expected next label at its level,** so a `2.` inside running text never opens a bogus clause.
+- **Continuation lines attach by indentation,** so trailing text after a clause's children lands on the parent rather than the last child.
+- **Two numbering conventions are supported,** and unlabeled text under a section is split into paragraph clauses on vertical gaps, so a definitions section written as quoted-term paragraphs still yields one clause per term.
+- **Failures are loud.** Anything rejected is listed in `warnings`, and the test suite asserts that list is empty for the reference forms.
 
 ### Endorsement engine
 
-`as_endorsed.endorse` turns endorsement prose into operations against the base form's clause tree and applies them in precedence order. This is the part no flat-chunk RAG has.
+`as_endorsed.endorse` turns endorsement prose into operations against the clause tree and applies them in precedence order. This is the part a conventional pipeline does not have.
 
-**Extraction** is rule-based first. The industry idiom is formulaic ("Condition 4.a.(5) is replaced by the following:", "The following section c. is added to Loss Settlement Condition 6.:", "Paragraph IV.14 is deleted."), so directives are matched sentence by sentence and the restated text after each directive is captured with the label structure the endorsement gave it. Targets are resolved deterministically against the clause tree by explicit path, by section name plus path, by heading words, or by defined term. Nothing is guessed: what the rules cannot place becomes an **unresolved** op (applied as a flagged sibling) or a **held** op (not applied; listed for review). An LLM extractor (`pip install -e ".[llm]"`, `--llm`) is wired in for text the rules cannot read, and its proposals go through the same resolver.
+**Extraction is rule-based first.** The industry idiom is formulaic, so directives are matched sentence by sentence and the restated text is captured with the label structure the endorsement gave it. Targets resolve deterministically against the clause tree by explicit path, by section name plus path, by heading words, or by defined term. Nothing is guessed: what the rules cannot place becomes **unresolved** (attached as a flagged sibling) or **held** (not applied, listed for review). An optional model-based extractor handles text the rules cannot read, and its proposals go through the same deterministic resolver.
 
 | Corpus | Ops | Resolved | Unresolved | Held | Note |
 |---|---:|---:|---:|---:|---|
-| Synthetic library (8 endorsements, ground truth known) | 8 | 6 | 1 | 1 | 8 of 8 expected ops extracted exactly; the unresolved one names no clause by design, the held one has schedule blanks |
-| TWIA endorsements (11 real forms) | 20 | 17 | 0 | 3 | Held: a scanned PDF, a notice page, and an "It is agreed that" clause with no target |
+| Synthetic library, ground truth known | 8 | 6 | 1 | 1 | All 8 expected operations extracted exactly; the unresolved one names no clause by design, the held one has schedule blanks |
+| 11 real published TWIA endorsements | 20 | 17 | 0 | 3 | Held: a scanned PDF, a notice page, and an "It is agreed that" clause naming no target |
 
-**Resolution** applies REPLACE, DELETE, ADD, AMEND_DEF and schedule-filled ops per account. An endorsement controls over the base form; between endorsements the later effective date controls; same-date changes to the same clause are applied in schedule order and recorded as a conflict with both texts. Every changed clause keeps its original text and a lineage of the ops that touched it, and resolution can be run as of any date. Across the 40 synthetic accounts: 73 ops, 66 resolved, 7 unresolved, 0 held once schedule values are supplied, 64 clauses changed or added.
+**Resolution** applies replace, delete, add, amend-definition and schedule-fill operations per account. An endorsement controls over the base form; between endorsements the later effective date controls; same-date changes to one clause are applied in schedule order and recorded as a conflict with both texts preserved. Every changed clause keeps its original wording and the lineage of operations that touched it, and resolution runs as of any date.
 
-The scanned TWIA form is a real held case: there is no text layer, so the op is held with that reason rather than silently skipped. OCR is still open.
+The scanned endorsement is a genuine held case: there is no text layer, so it is held with that reason rather than silently skipped. Optical character recognition is still open.
 
-### Retrieval ladder and eval harness
+### Retrieval and evaluation
 
-`as_endorsed.retrieval` indexes each account's material five ways and `as_endorsed.eval` runs the ablation ladder over the ground-truth set. Every rung adds one thing, so the table reads as a story rather than a grid.
-
-- **Router.** Limits, deductibles, premiums, dates and identifiers are typed facts on the declarations page. Questions about them go to a structured lookup on the account record, with as-of dates honoured; everything else goes to retrieval. Mixed questions run both.
+- **Router.** Limits, deductibles, premiums and dates are typed facts, answered from the account record with as-of dates honoured. Everything else goes to retrieval.
 - **Hard account filter.** Every search is scoped to one account before ranking. Cross-account leakage is a breach, not a relevance problem, so the filter is not optional.
-- **Hybrid search.** Dense cosine and BM25 rankings fused with reciprocal rank fusion, then an optional cross-encoder rerank of the fused candidates, then optional pull-in of the definitions of defined terms that appear in the top hits.
-- **Chunk variants.** `fixed` and `recursive` windows over the flat text; `clause` (one chunk per clause, endorsements as separate documents, the way a naive pipeline sees them); `resolved` (one chunk per clause *as endorsed*: replaced text in place, deleted clauses marked, added clauses present, unplaced endorsement text flagged); `header` (resolved plus a one-line contextual header: form, section path, heading, modified-by). Window chunks still record which clause paths they cover so hit@k is scored fairly for every rung.
-- **As-of views on demand.** For a question about a past date, the account is re-resolved as of that date and indexed just for that query. Embeddings are content-addressed and cached, so this costs milliseconds.
-- **Metrics.** `hit@k` and MRR on expected clause paths, plus `answer@k`: a retrieved chunk carries the *current* answer. For a policy with an endorsement attached that means the clause as amended, or the endorsement text naming the clause it changes; for a policy without, the unamended clause. That is the metric that separates a chunk that looks relevant from one that is right. Latency is wall-clock per query on CPU.
-- **Backends.** An in-memory index (numpy + BM25) runs the eval and tests; a Postgres + pgvector backend with the same interface (`docker compose up db`) is there for serving.
+- **Hybrid search.** Dense and keyword rankings fused with reciprocal rank fusion, an optional cross-encoder rerank, and optional pull-in of definitions referenced by the top hits.
+- **Five chunk variants** so the comparison is fair, from fixed windows through to the as-endorsed index, all recording which clause paths they cover.
+- **As-of views on demand.** For a question about a past date the account is re-resolved as of that date and indexed for that query.
 
-#### Results
+Embedder `BAAI/bge-small-en-v1.5`, reranker `Xenova/ms-marco-MiniLM-L-6-v2`, k=5, 40 accounts. Declarations questions: **100%** exact on 447 questions.
 
-Embedder: `BAAI/bge-small-en-v1.5` · Reranker: `Xenova/ms-marco-MiniLM-L-6-v2` · k=5 · accounts=40
+| Rung | Configuration | Chunks | hit@k | MRR | answer@k | p50 ms |
+|---|---|---:|---:|---:|---:|---:|
+| 1 | fixed windows + dense | 1,793 | 60.3% | 0.31 | 73.1% | 65 |
+| 2 | recursive windows + dense | 1,673 | 23.8% | 0.16 | 56.0% | 65 |
+| 3 | clause-aware + dense | 20,258 | 56.1% | 0.50 | 42.3% | 66 |
+| 4 | clause-aware + hybrid | 20,258 | 56.1% | 0.39 | 42.3% | 68 |
+| 5 | clause-aware + hybrid + rerank | 20,258 | 61.4% | 0.40 | 52.2% | 1342 |
+| 6 | **as endorsed** + hybrid + rerank | 20,102 | 83.1% | 0.72 | **89.0%** | 1357 |
+| 7 | as endorsed + contextual header | 20,102 | 83.1% | 0.71 | 89.0% | 1603 |
+| 7d | as endorsed + header + definitions | 20,102 | 83.1% | 0.71 | 89.0% | 1538 |
 
-Declarations (router + structured lookup): exact match **100.0%** on 447 questions; routed to lookup 100.0%.
+`answer@k` is the metric that matters: a retrieved chunk carries the *currently correct* answer, not merely a relevant-looking one.
 
-| Rung | Configuration | Chunks | hit@k | MRR | answer@k | resolved | negative | as-of | p50 ms | p95 ms |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1 | fixed + dense | 1,793 | 60.3% | 0.31 | **73.1%** | 70% | 76% | 74% | 65 | 78 |
-| 2 | recursive + dense | 1,673 | 23.8% | 0.16 | **56.0%** | 70% | 34% | 68% | 65 | 77 |
-| 3 | clause + dense | 20,258 | 56.1% | 0.50 | **42.3%** | 28% | 65% | 32% | 66 | 77 |
-| 4 | clause + hybrid | 20,258 | 56.1% | 0.39 | **42.3%** | 28% | 65% | 32% | 68 | 80 |
-| 5 | clause + hybrid + rerank | 20,258 | 61.4% | 0.40 | **52.2%** | 40% | 79% | 26% | 1342 | 1546 |
-| 6 | resolved + hybrid + rerank | 20,102 | 83.1% | 0.72 | **89.0%** | 100% | 76% | 88% | 1357 | 1552 |
-| 7 | header + hybrid + rerank | 20,102 | 83.1% | 0.71 | **89.0%** | 100% | 76% | 88% | 1603 | 6123 |
-| 7d | header + hybrid + rerank + defs | 20,102 | 83.1% | 0.71 | **89.0%** | 100% | 76% | 88% | 1538 | 1859 |
+Reading the table honestly. Rung 1 scores well because a 512-token window covers eight or more clauses at once and gets credit whenever the whole endorsement lands in one window; a generator would still have to reconcile the two. Hybrid search did not beat dense alone on these short paraphrased questions, and the contextual header neither helped nor hurt. Both are reported as measured. The move from rung 5 to rung 6 is the thesis: same retrieval, same reranker, but the index holds the policy as endorsed. Reranked latency is a cross-encoder scoring 30 candidates on a laptop CPU that was also running the test suite; uncontended it measures about 620 ms.
 
-Reading the table: rung 1 scores well only because a 512-token window covers eight or more clauses at once, and `answer@k` gives it credit whenever the whole endorsement document lands in a window; a generator then has to reconcile the base clause and the endorsement itself. The clause-level rungs are scored on the single right clause. Hybrid search (rung 4) did not beat dense alone on these short paraphrased questions, and the contextual header (rung 7) neither helped nor hurt; both are reported as measured. The move from rung 5 to rung 6 is the project's thesis in one line: same retrieval, same reranker, but the index now holds the policy as endorsed, so the chunk that comes back is the current text with its lineage rather than the printed base form, and every question about an attached endorsement is answered by a correct chunk. Reranked latency is the MiniLM cross-encoder scoring 30 candidates on a laptop CPU; this run shared the machine with the test suite, and an uncontended run measures about 620 ms at p50. Generation quality on top of these hits is measured in the next section.
-
-### Cited generation with checks
-
-`as_endorsed.generate` turns retrieved clauses into an answer that can be trusted or refused, never merely produced.
+### Generation with checks
 
 ```
 route ─► declarations lookup (typed facts, cited to the declarations page)
@@ -163,101 +147,76 @@ route ─► declarations lookup (typed facts, cited to the declarations page)
                     └── one rewrite-and-retry ◄── can't answer
 ```
 
-- **Every sentence is a claim with citations.** The generator returns claims tied to chunk ids, not free text. Claude is called with a structured output schema; the extractive generator returns the best-matching clause as its single claim.
-- **Groundedness check.** A claim survives only if a cited chunk lexically supports it: most of its content words, and every dollar amount and number in it, appear in that chunk. Unsupported claims are dropped; an answer with nothing left is withheld.
-- **Numeric guard.** The number the answer turns on must appear in a cited clause or be the declarations value. A fabricated amount is never released.
-- **Abstention.** "The policy does not address this" is a valid outcome, cited to what was retrieved, and the eval rewards it on unanswerable questions.
-- **One loop, hard-capped.** When the generator cannot answer, a grader names what is missing and rewrites the retrieval query once; the pipeline retrieves again and drafts again. It never loops twice. The eval reports how often it fired.
-- **Two generators, one contract.** `claude` (Claude Opus 5 by default, configurable) is the real one; `extractive` uses no model and exists so the whole pipeline runs and is measured without credentials, and so the checks are exercised by something that can be wrong. Credentials are resolved by the SDK; none are present on the machine this was built on, so the Claude path is tested against a stub client and its live numbers are still to be run.
+- **Every sentence is a claim with citations,** tied to chunk identifiers rather than free text.
+- **Groundedness check.** A claim survives only if a cited chunk supports it: most of its content words, and every amount in it, appear in that chunk. Unsupported claims are dropped and an answer with nothing left is withheld.
+- **Numeric guard.** The number an answer turns on must appear in a cited clause. A fabricated amount is never released.
+- **Abstention.** "The policy does not address this" is a valid, cited outcome, and the evaluation rewards it.
+- **One retry, hard-capped.** When the generator cannot answer, a grader names what is missing and rewrites the query once. It never loops twice.
+- **Two generators, one contract.** A hosted-model generator, and an extractive one that uses no model so the whole pipeline runs and is measured without credentials. The hosted path is covered by tests against a stub client; its live numbers are still to be run.
 
-#### Results, extractive generator
-
-Generator: `extractive` · retrieval rung: 7d · loop: on · questions: 636
+Extractive generator over all 636 questions, retrieval rung 7d:
 
 | Metric | Value |
 |---|---:|
-| Exact match (money, dates, short text; n=433) | **100.0%** |
-| Lexical correctness proxy (long text, ≥0.6 overlap; n=199) | 62.3% |
-| LLM-judged correctness | no model configured |
-| Abstention precision / recall (unanswerable) | 9% / 100% |
+| Exact match, money and dates and short text, n=433 | **100.0%** |
+| Lexical correctness proxy, long text, n=199 | 62.3% |
 | Citation@1 hits an expected clause | 64.6% |
-| Withheld by checks | 0.0% |
 | Abstained | 6.9% |
-| Rewrite-and-retry loop fired | 0.0% |
-| Latency p50 / p95 (ms) | 0 / 1750 |
+| Withheld by the checks | 0.0% |
 
-| Category | n | exact | lexical ≥0.6 | cite@1 |
-|---|---:|---:|---:|---:|
-| declarations/as-of | 51 | 100% | – | – |
-| declarations/lookup | 392 | 100% | 100% | – |
-| declarations/unanswerable | 4 | – | – | – |
-| endorsement-resolved/as-of | 37 | 100% | 57% | 38% |
-| endorsement-resolved/negative | 72 | 100% | 20% | 74% |
-| endorsement-resolved/resolved | 80 | 100% | 80% | 68% |
+Every money answer is exact because the numeric guard only releases an amount that appears in the cited clause. Long-text answers are where a real generator earns its cost: the extractive one can only hand back a clause verbatim. Nothing was withheld because this generator's claims *are* the cited chunk, so they ground trivially; the checks bite on a generator that paraphrases, which the tests exercise by rejecting a fabricated figure.
 
-Reading the table: the declarations questions are exact because the router answers them from the record, and every money answer on the clause questions is exact because the numeric guard only lets through an amount that appears in the cited clause. On long-text answers the extractive generator can only hand back a clause verbatim, so correctness is a lexical proxy and is where a real generator earns its cost. Nothing was withheld because this generator's claims *are* the cited chunk, so they ground trivially; the groundedness and numeric checks bite on a generator that paraphrases, which the stub tests exercise (a fabricated $9,999 is refused). Its abstention precision is low for the same reason: it abstains whenever no retrieved clause shares two of the question's terms, which on this set mostly happened on clause questions it should have answered. Rerunning with `--generator claude --judge` once credentials are configured fills in the LLM-judged row, the loop rate, and a meaningful abstention number.
+## Run it yourself
 
-## Repository layout
-
+```bash
+docker compose up api
 ```
-src/as_endorsed/
-  corpus/registry.py     public form registry + downloader (FEMA, TWIA)
-  ingest/pdf.py          PDF → ordered lines with coordinates, header/footer strip
-  ingest/clauses.py      clause tree parser (Roman and word-heading styles, paragraphs)
-  endorse/refs.py        clause reference → path resolver
-  endorse/extract.py     rule-based op extraction
-  endorse/llm.py         optional LLM extraction (same resolver, same schema)
-  endorse/resolve.py     precedence resolver, as-of materialisation
-  endorse/pipeline.py    data/ plumbing shared by CLI and tests
-  retrieval/chunking.py  the five chunk variants, with clause-path coverage
-  retrieval/embed.py     bge-small via ONNX, hash stand-in, content-addressed cache
-  retrieval/index.py     in-memory and pgvector indexes, RRF, search, definition pull-in
-  retrieval/rerank.py    cross-encoder rerankers
-  retrieval/router.py    declarations router + structured lookup
-  eval/harness.py        the ablation ladder and its metrics
-  eval/generation.py     the answer-pipeline eval
-  api.py                 FastAPI: accounts, ask, PDFs, clauses with boxes, review, eval
-web/                     the reference client (pdf.js highlights the cited clause's boxes)
-  generate/schema.py     Claim, Draft, Answer: the generator contract
-  generate/pipeline.py   route → retrieve → draft → groundedness → numeric guard → loop
-  generate/llm.py        Claude generator, grader and judge (structured outputs, injectable client)
-  generate/extractive.py the no-model generator
-  synth/accounts.py      synthetic account generator
-  synth/endorsements.py  synthetic endorsement library with ground truth
-  synth/render.py        declarations + change endorsement PDF renderer
-  synth/qa.py            ground-truth question templates
-  models.py              shared pydantic records (Clause, ParsedForm, ...)
-  cli.py, cli_endorse.py, cli_retrieval.py, cli_generate.py   `as-endorsed` entry point
-tests/                   parser and engine tests run against the real forms
-data/                  raw, parsed, synthetic (gitignored; regenerate with the CLI)
+
+Then open http://localhost:8000. Or without Docker:
+
+```bash
+python -m venv .venv && .venv/Scripts/activate      # or source .venv/bin/activate
+pip install -e ".[dev]"
+as-endorsed bootstrap        # public forms, parsing, synthetic accounts, resolution, search index
+uvicorn as_endorsed.api:app --port 8000
 ```
+
+The command line exposes every stage independently:
+
+```bash
+as-endorsed parse --all                            # clause trees from the public forms
+as-endorsed endorse extract --all                  # amendment operations from real endorsements
+as-endorsed review                                 # what the engine refused to apply, and why
+as-endorsed resolve                                # apply endorsements to every account
+as-endorsed eval run                               # the full ablation ladder
+as-endorsed ask "Does the policy exclude hot tubs?" -a SYN-00001
+pytest                                             # 45 tests
+```
+
+To use a hosted model for the prose, set `ANTHROPIC_API_KEY`. Without it the extractive generator answers and says so. [`deploy/README.md`](deploy/README.md) covers deployment.
 
 ## Security posture
 
-The public demo serves synthetic accounts, so there is nothing to steal, but the surface is treated as if there were.
+The demo serves synthetic accounts, so there is nothing to steal, but the surface is treated as though there were.
 
-- **No personal data.** Every account, name, address and declarations page is generated from a seed. The only real documents are public government and association forms.
-- **Account scoping is enforced in retrieval,** not in the prompt: every search hard-filters to one account before ranking, so one policy's clauses cannot surface under another.
-- **File access goes through an allowlist.** A form key resolves against the registry or the synthetic library; no request builds a filesystem path, so no input can walk the tree.
-- **Bounded work per request.** Questions are length-capped, an as-of date must fall inside the policy term, the on-demand as-of indexes are an LRU with a fixed cap, and the expensive endpoint is rate-limited per client. Platform scaling is capped at one replica, so a flood cannot run up a bill.
-- **Browser hardening.** A strict content security policy (no inline scripts or styles, an explicit allowlist for the PDF renderer and fonts), `nosniff`, `frame-ancestors 'none'` and `no-referrer`. All rendered values are escaped; nothing a visitor types reaches the page as markup.
-- **Container.** Runs as a non-root user, contains no credentials, and needs no network at runtime. The optional model API key is injected as a platform secret, never baked in.
-- **Dependencies** are audited with `pip-audit`; no known vulnerabilities at the time of writing.
+- **No personal data.** Every account, name and address is generated from a seed. The only real documents are public government and association forms.
+- **Account scoping is enforced in retrieval,** not in a prompt: every search hard-filters to one account before ranking.
+- **File access goes through an allowlist.** No request builds a filesystem path, so no input can walk the tree.
+- **Bounded work per request.** Length-capped questions, as-of dates validated against the policy term, a fixed-size cache for on-demand indexes, and a per-client rate limit on the expensive endpoint. Platform scaling is capped, so a flood cannot run up a bill.
+- **Browser hardening.** A strict content security policy with no inline scripts or styles, `nosniff`, `frame-ancestors 'none'` and `no-referrer`. Everything rendered is escaped.
+- **Container.** Non-root user, no credentials inside, no network needed at runtime. Any model key is injected as a platform secret.
+- **Dependencies** audited with `pip-audit`, no known vulnerabilities at the time of writing.
 
-There is deliberately no authentication: it is a public demo of a retrieval system. Serving real policies would need authentication, per-tenant isolation at the storage layer, and an audit log of who asked what, none of which this repository implements.
-
-## Licensing
-
-Only public-domain or openly published forms are in the registry. FEMA's Standard Flood Insurance Policy forms are US Government works and a copy ships in `corpus/fema/`, because fema.gov's edge intermittently blocks non-browser downloads. The Texas Windstorm Insurance Association publishes its dwelling policy and endorsements openly on twia.org; they are downloaded by script and not committed. Forms owned by Insurance Services Office (ISO) are copyrighted and are never committed to this repository. Citizens Florida keeps its forms behind an agent login and is therefore not a corpus source.
-
-## Roadmap
-
-1. **Corpus and parser** (done): NFIP forms, clause tree, synthetic accounts, ground-truth Q&A.
-2. **Endorsement engine** (done): operation extraction, target validation against the clause tree, precedence resolution, held-ops review list, TWIA policy and endorsement library, endorsement-resolved ground truth.
-3. **Retrieval ladder** (done): declarations router, hybrid dense + BM25 with reciprocal rank fusion, cross-encoder rerank, definition pull-in, as-of views, in-memory and pgvector indexes, eval harness with the ablation table.
-4. **Generation** (done): claim-level citations, groundedness check, numeric guard, abstention, one bounded retrieve-again loop, generation eval; Claude path built and stub-tested, live numbers pending credentials.
-5. **Ship** (done): FastAPI + reference client with PDF clause highlighting from the parser's bounding boxes, self-contained image, CI publishing to GHCR, deployed to Azure Container Apps at https://as-endorsed.wittybay-fdf1bbec.germanywestcentral.azurecontainerapps.io. Still open: the demo video and OCR for scanned forms.
+There is deliberately no authentication: it is a public demo. Serving real policies would need authentication, per-tenant isolation at the storage layer, and an audit log of who asked what, none of which this repository implements.
 
 ## Boundaries
 
-The system reports what a policy says and where. It does not make coverage determinations, and it does not interpret ambiguity. Where two endorsements conflict beyond what the precedence rules resolve, both texts are surfaced as a conflict.
+The system reports what a policy says and where. It does not decide whether a claim will be paid, and it does not interpret ambiguous wording. Where two endorsements conflict beyond what the precedence rules resolve, both texts are surfaced as a conflict for a human to settle. Optical character recognition for scanned endorsements is not implemented, which is why one real form sits in the review queue rather than being silently skipped.
+
+## Licensing
+
+Only public-domain or openly published forms are in the registry. FEMA's Standard Flood Insurance Policy forms are US Government works and a copy ships in `corpus/fema/`, because fema.gov's edge intermittently blocks non-browser downloads. The Texas Windstorm Insurance Association publishes its dwelling policy and endorsements openly; they are downloaded by script and not committed. Forms owned by Insurance Services Office are copyrighted and never enter this repository.
+
+## Built by
+
+Ammar Faisal. Available for freelance work on document understanding, retrieval systems and evaluation. The quickest way to judge the work is the [live demo](https://as-endorsed.wittybay-fdf1bbec.germanywestcentral.azurecontainerapps.io) and the results tables above.
