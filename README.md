@@ -55,9 +55,11 @@ Row two against row one is the whole argument. Same search engine, same reranker
 | Measurement, full pipeline | Result |
 |---|---:|
 | Limits, deductibles, dates and identifiers, exact match, n=447 | **100%** |
-| Money and short-text answers through the checked generator, exact match, n=433 | **100%** |
+| Money and short-text answers, exact match, n=433 | **100%** |
 | Long-form answers, lexical similarity to the reference, n=199 | 62.3% |
 | First citation points at an expected clause | 64.6% |
+
+**What the money result does and does not prove.** The extractive generator returns the cited clause verbatim, so any amount it reports came from that clause by construction. The figure shows the pipeline does not corrupt a number in transit. It does **not** demonstrate that the numeric guard works, because on this path the guard has nothing to catch. The guard is demonstrated separately, by a test that feeds the hosted-generator path a fabricated $9,999 through a stub client and asserts the answer is withheld. Two claims, two separate pieces of evidence, deliberately not merged.
 
 Separately, the amendment engine resolved 17 of 20 instructions across 11 real published endorsements, holding the other 3 for review with a stated reason rather than guessing.
 
@@ -68,6 +70,7 @@ Worth saying before anyone asks.
 - **Every figure above came from the extractive generator,** which returns the cited clause verbatim instead of writing prose. The hosted-model generator is implemented and covered by tests against a stub client, but it has never been run against the evaluation set. The quality of generated prose is therefore unmeasured. Running `as-endorsed eval generate --generator claude --judge` with an API key fills that gap, and the results will be published here when it is.
 - **Long-form correctness is the weakest number here,** and 62.3% is a lexical proxy rather than a judgement of meaning. That is precisely the number a hosted model should improve, and precisely the claim I cannot yet make.
 - **Retrieval is measured far more rigorously than generation.** That is an honest description of where the engineering effort went.
+- **When the hosted-model evaluation is run, its long-form score will be graded by a language model** comparing the answer against a reference, not by exact match. That is a legitimate method and a weaker kind of evidence than the exact-match figures above. It will be labelled as such when published, not quoted as though it were the same currency.
 
 Full tables, the metric definitions, and the changes that did **not** improve anything are in [How it works](#how-it-works). Nothing measured is hidden.
 
@@ -199,7 +202,7 @@ Extractive generator over all 636 questions, retrieval rung 7d:
 | Abstained | 6.9% |
 | Withheld by the checks | 0.0% |
 
-Every money answer is exact because the numeric guard only releases an amount that appears in the cited clause. Long-text answers are where a real generator earns its cost: the extractive one can only hand back a clause verbatim. Nothing was withheld because this generator's claims *are* the cited chunk, so they ground trivially; the checks bite on a generator that paraphrases, which the tests exercise by rejecting a fabricated figure.
+Read this table carefully, because it is easy to over-read. Every money answer is exact because this generator hands back the clause verbatim, so the amount came from the clause by construction. Nothing was withheld for the same structural reason: its claims *are* the cited chunk, so they ground trivially and the checks have nothing to catch. Neither result is evidence that the checks work. The checks are exercised instead by tests against a stub client, which reject a fabricated figure and an unsupported claim on the hosted-generator path. Long-form answers are where a real generator earns its cost, and 62.3% against a lexical proxy is the honest floor rather than a quality score.
 
 ## Run it yourself
 

@@ -194,6 +194,31 @@ class RungResult:
     chunks: int = 0
 
 
+def provenance() -> dict[str, str]:
+    """When these numbers were produced and from which commit.
+
+    A results table that outlives the code it measured is a quiet way to publish
+    something untrue, so every report carries its own provenance.
+    """
+    import subprocess
+    from datetime import datetime, timezone
+
+    from as_endorsed.config import REPO_ROOT
+
+    commit, dirty = "", False
+    try:
+        commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO_ROOT,
+                                capture_output=True, text=True, timeout=10).stdout.strip()
+        dirty = bool(subprocess.run(["git", "status", "--porcelain"], cwd=REPO_ROOT,
+                                    capture_output=True, text=True, timeout=10).stdout.strip())
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return {
+        "measured_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "commit": (commit + (", working tree modified" if dirty else "")) if commit else "unknown",
+    }
+
+
 @dataclass
 class EvalReport:
     embedder: str
@@ -202,9 +227,12 @@ class EvalReport:
     accounts: int
     declarations: dict[str, float]
     rungs: list[RungResult]
+    measured_at: str = ""
+    commit: str = ""
 
     def to_markdown(self) -> str:
-        lines = [f"Embedder: `{self.embedder}` · Reranker: `{self.reranker}` · k={self.k} · accounts={self.accounts}", "",
+        stamp = f" · measured {self.measured_at} at commit `{self.commit}`" if self.measured_at else ""
+        lines = [f"Embedder: `{self.embedder}` · Reranker: `{self.reranker}` · k={self.k} · accounts={self.accounts}{stamp}", "",
                  f"Declarations (router + structured lookup): exact match **{self.declarations['exact']:.1%}** on {int(self.declarations['n'])} questions; "
                  f"routed to lookup {self.declarations['routed']:.1%}.", "",
                  "| Rung | Configuration | Chunks | hit@k | MRR | answer@k | resolved | negative | as-of | p50 ms | p95 ms |",
@@ -286,11 +314,12 @@ def run(rungs: list[Rung] | None = None, *, embedder_name: str = "bge", reranker
         results.append(res)
         log(f"rung {rung.id:>2} {rung.label:34} hit@{k}={res.hit_at_k:.1%} mrr={res.mrr:.2f} answer@{k}={res.answer_at_k:.1%} p50={res.latency_ms_p50:.0f}ms")
 
-    report = EvalReport(embedder.name, reranker.name if reranker else "none", k, len(corpus.accounts), declarations, results)
+    prov = provenance()
+    report = EvalReport(embedder.name, reranker.name if reranker else "none", k, len(corpus.accounts), declarations, results, **prov)
     out_dir = out_dir or (settings.data_dir / "eval")
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "results.json").write_text(json.dumps({
         "embedder": report.embedder, "reranker": report.reranker, "k": k, "accounts": report.accounts,
-        "declarations": declarations, "rungs": [r.__dict__ for r in results]}, indent=2), encoding="utf-8")
+        **prov, "declarations": declarations, "rungs": [r.__dict__ for r in results]}, indent=2), encoding="utf-8")
     (out_dir / "results.md").write_text(report.to_markdown(), encoding="utf-8")
     return report

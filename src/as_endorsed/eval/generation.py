@@ -27,7 +27,7 @@ from pathlib import Path
 import numpy as np
 
 from as_endorsed.config import settings
-from as_endorsed.eval.harness import Corpus, _as_of_index, build_index, load_corpus
+from as_endorsed.eval.harness import Corpus, _as_of_index, build_index, load_corpus, provenance
 from as_endorsed.generate.context import content_words
 from as_endorsed.generate.extractive import ExtractiveGenerator
 from as_endorsed.generate.pipeline import GenConfig, Generator, Resources, answer_question
@@ -83,11 +83,15 @@ class GenReport:
     latency_ms_p50: float
     latency_ms_p95: float
     by_category: dict[str, dict[str, float]] = field(default_factory=dict)
+    measured_at: str = ""
+    commit: str = ""
 
     def to_markdown(self) -> str:
-        judged = f"{self.judged:.1%} (n={self.judged_n})" if self.judged is not None else "no model configured"
+        judged = (f"{self.judged:.1%} (n={self.judged_n}), graded by a language model against a reference answer"
+                  if self.judged is not None else "not run: no model configured")
+        stamp = f" · measured {self.measured_at} at commit `{self.commit}`" if self.measured_at else ""
         lines = [
-            f"Generator: `{self.generator}` · retrieval rung: {self.rung} · loop: {'on' if self.loop else 'off'} · questions: {self.n}", "",
+            f"Generator: `{self.generator}` · retrieval rung: {self.rung} · loop: {'on' if self.loop else 'off'} · questions: {self.n}{stamp}", "",
             "| Metric | Value |", "|---|---:|",
             f"| Exact match (money, dates, short text; n={self.exact_n}) | **{self.exact:.1%}** |",
             f"| Lexical correctness proxy (long text, ≥0.6 overlap; n={self.lexical_n}) | {self.lexical:.1%} |",
@@ -176,6 +180,7 @@ def run(*, generator: Generator | None = None, rung: str = "7d", embedder_name: 
         d["exact_n"], d["lexical_n"], d["cite_n"] = len(e), len(l), len(c)
 
     report = GenReport(
+        **provenance(),
         generator=generator.name, rung=rung, loop=loop, n=len(rows_out),
         exact_n=len(exact), exact=rate(exact), lexical_n=len(lex), lexical=rate(lex),
         judged_n=len(judged), judged=rate(judged) if judged else None,
