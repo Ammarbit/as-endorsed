@@ -4,7 +4,9 @@ Retrieval over insurance policies **as they currently read**, not as the base fo
 
 A policy is a declarations page, one or more base coverage forms, and a schedule of endorsements that replace, delete, or add clauses. Flat-chunk RAG retrieves whichever version of a clause scores highest. This system resolves the endorsement stack at ingest and answers from the resolved policy, citing the clause, the form it lives in, and the endorsement that last changed it.
 
-> Status: **all five milestones built.** Runs locally or in one container; public deployment and the live Claude numbers wait on an account and an API key. See [Roadmap](#roadmap).
+> **Live demo:** https://as-endorsed.wittybay-fdf1bbec.germanywestcentral.azurecontainerapps.io (Azure Container Apps, scales to zero: the first request after idle takes about 20 seconds while the container starts.)
+>
+> Status: **all five milestones built and deployed.** The live Claude numbers wait on an API key. See [Roadmap](#roadmap).
 
 ## Results first
 
@@ -240,7 +242,7 @@ Only public-domain or openly published forms are in the registry. FEMA's Standar
 2. **Endorsement engine** (done): operation extraction, target validation against the clause tree, precedence resolution, held-ops review list, TWIA policy and endorsement library, endorsement-resolved ground truth.
 3. **Retrieval ladder** (done): declarations router, hybrid dense + BM25 with reciprocal rank fusion, cross-encoder rerank, definition pull-in, as-of views, in-memory and pgvector indexes, eval harness with the ablation table.
 4. **Generation** (done): claim-level citations, groundedness check, numeric guard, abstention, one bounded retrieve-again loop, generation eval; Claude path built and stub-tested, live numbers pending credentials.
-5. **Ship** (built): FastAPI + reference client with PDF clause highlighting from the parser's bounding boxes, Dockerfile and compose, `bootstrap` command, Fly config. Still open: a public URL (needs an account), the demo video, and OCR for scanned forms.
+5. **Ship** (done): FastAPI + reference client with PDF clause highlighting from the parser's bounding boxes, self-contained image, CI publishing to GHCR, deployed to Azure Container Apps at https://as-endorsed.wittybay-fdf1bbec.germanywestcentral.azurecontainerapps.io. Still open: the demo video and OCR for scanned forms.
 
 ## Boundaries
 
